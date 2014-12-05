@@ -109,45 +109,38 @@ class Service
      */
     public static function sql ($request, &$data)
     {
-        try
+        if (stripos($request, '[fields]'))
         {
-            if (stripos($request, '[fields]'))
+            $request = str_replace('[fields]', self::createSelectString($data), $request);
+        }
+        if (stripos($request, '[expression]'))
+        {
+            if (stripos($request, 'EXCEPT') !== false)
             {
-                $request = str_replace('[fields]', self::createSelectString($data), $request);
+                $expression = self::createPrepareFields($data, 'inline');
             }
-            if (stripos($request, '[expression]'))
+            elseif (stripos($request, 'INSERT') !== false)
             {
-                if (stripos($request, 'EXCEPT') !== false)
-                {
-                    $expression = self::createPrepareFields($data, 'inline');
-                }
-                elseif (stripos($request, 'INSERT') !== false)
-                {
-                    $expression = self::createPrepareFields($data);
-                }
-                elseif (stripos($request, 'UPDATE') !== false)
-                {
-                    $data2 = $data;
-                    foreach($data AS $key => $value)
+                $expression = self::createPrepareFields($data);
+            }
+            elseif (stripos($request, 'UPDATE') !== false)
+            {
+                $data2 = $data;
+                foreach($data AS $key => $value)
                     if (strpos($request, ':' . $key) !== false)
                     {
                         unset($data2[$key]);
                     }
-                    $expression = self::createPrepareFields($data2, 'update');
-                }
-
-                if (isset($expression))
-                {
-                    $request = str_replace('[expression]', $expression, $request);
-                }
+                $expression = self::createPrepareFields($data2, 'update');
             }
 
-            return $request;
+            if (isset($expression))
+            {
+                $request = str_replace('[expression]', $expression, $request);
+            }
         }
-        catch (Exception $e)
-        {
-            throw $e;
-        }
+
+        return $request;
     }
 
 }
