@@ -2,7 +2,7 @@ _PDO
 ====
 ###1.Описание методов
 #####Класс class._pdo.php
-`public static function create ($dbdriver = < pgsql| mysql >, $login = 'test', $password = 'test', $dbname = 'test', $hostorsock = '< /path/to/socket | db host >', $port = 6432)`
+`public static function create ($dbdriver = < pgsql| mysql >, $login = 'test', $password = 'test', $dbname = 'test', $hostorsock = '< /path/to/socket | db host >', $port = 6432)`   
 Singleton для объекта класса. Статический метод возвращающий объект класса _PDO.
 Параметры:
 * *$dbdriver* - драйвер доступа к СУБД. На данный момент поддерживаются СУБД MySQL и PostgreSQL. 
