@@ -103,7 +103,7 @@ _PDO
 
 если на входе у нас данные [param1 => true, param2 = false]
 превратиться в запрос
-INSERT INTO    
+`INSERT INTO    
    controls    
    (param1, param2)      
 VALUES    
@@ -112,13 +112,13 @@ RETURNING
    id AS     
    control_id,   
    param1,   
-   param2    
+   param2`   
 
 что является prepared-запросом и может выполнится средствами метода _PDO::query (<текст запроса>, <массив параметров>).
 
 Таким образом полный код исполнения выше приведенного запроса будет следующим:
-`$dbconnect = _PDO::create($dbdriver);  
-$params = [param1 => true, param2 = false];  
+`$dbconnect = _PDO::create($dbdriver);     
+$params = [param1 => true, param2 = false];    
 $query = "INSERT INTO    
            controls     
            ([fields])    
