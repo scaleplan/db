@@ -97,15 +97,28 @@ class _PDO
         $this->dbh->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         if (!isset($_SESSION['tables']))
         {
-            if ($this->tables = $this->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"))
+            if ($this->dbdriver == 'pgsql')
             {
-                $this->tables[]['table_name'] = 'pg_type';
-                $_SESSION['tables'] = json_encode($this->tables, JSON_UNESCAPED_UNICODE);
+                if ($this->tables = $this->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"))
+                {
+                    $this->tables[]['table_name'] = 'pg_type';
+                }
+                else
+                {
+                    throw new _PDOException('Список таблиц пуст');
+                }
             }
-            else
+            elseif ($this->dbdriver == 'mysql')
             {
-                throw new _PDOException('Список таблиц пуст');
+                if ($tables = $this->query("SHOW TABLES"))
+                {
+                    foreach ($tables AS $table)
+                    {
+                        $this->tables[]['table_name'] = $table[0];
+                    }
+                }
             }
+            $_SESSION['tables'] = json_encode($this->tables, JSON_UNESCAPED_UNICODE);
         }
         else
         {
@@ -132,7 +145,7 @@ class _PDO
      * @throws Exception
      * @throws PDOException
      */
-    function query($query, array $params = array())
+    public function query($query, array $params = [])
     {
         $execQuery = function(&$params, &$query, &$db, &$row_count)
         {
@@ -198,7 +211,7 @@ class _PDO
      *
      * @return mixed
      */
-    function beginTransaction ()
+    public function beginTransaction ()
     {
         try
         {
@@ -213,7 +226,7 @@ class _PDO
     /**
      * Закоммитить транзакцию
      */
-    function commit ()
+    public function commit ()
     {
         try
         {
@@ -228,7 +241,7 @@ class _PDO
     /**
      * Откатить транзакцию
      */
-    function rollBack ()
+    public function rollBack ()
     {
         try
         {
@@ -247,19 +260,19 @@ class _PDO
      * @param $value
      * @return mixed
      */
-    function setAttribute ($attribute, $value)
+    public function setAttribute ($attribute, $value)
     {
         return $this->dbh->setAttribute($attribute, $value);
     }
 
     /**
-     * Возвращаем имена таблиц использующихся в запросе на изменение
+     * Возвращаем имена таблиц использующихся в запросе
      *
      * @param bool $query
      * @return array|string
      * @throws _PDOException
      */
-    function getTables ($query)
+    public function getTables ($query)
     {
         $tables = false;
         foreach ($this->tables AS $table)
