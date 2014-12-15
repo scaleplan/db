@@ -64,3 +64,25 @@ _PDO
 ######Если запрос является запросом на изменение, то возвращает учавствующие в запросе таблицы, иначе возвратит FALSE 
 **Параметры:**    
 * *$query* - текст запроса.
+
+
+##Класс class.service.php
+####createPrepareFields
+`public static function createPrepareFields (array &$data, $type = 'insert')`   
+######Формирование строки плейсхолдеров для SQL-запросов
+**Параметры:**    
+* *$data* - массив данных запроса;
+* *$type - тип запроса, поддерживаются следующие варианты: insert, inline, либо пустое значение.
+
+####createSelectString
+`public static function createSelectString (array $data)`   
+######Формирование списка полей для SQL-запросов
+**Параметры:**    
+* *$data* - массив данных запроса;
+
+####sql
+`public static function sql ($request, &$data)`   
+######Разбор SQL-шаблона
+**Параметры:**    
+* *$request* - текст шаблона запроса;
+* *$data* - массив данных запроса;
