@@ -92,18 +92,21 @@ _PDO
 #Как использовать
 На вход модуля приходит набор данных для формирования запроса SQL-запрос, который может содержать шаблонные элементы, которые затем будут обрабатываться SQL-шаблонизатором посредством методов класса Service.
 Например шаблон вида     
-`INSERT INTO    
+```
+INSERT INTO    
    controls     
    ([fields])    
  VALUES    
    [expression]    
  RETURNING    
    id AS control_id,    
-   [fields]`   
+   [fields]
+```
 
 если на входе у нас данные [param1 => true, param2 = false]
 превратиться в запрос
-`INSERT INTO    
+```
+INSERT INTO    
    controls    
    (param1, param2)      
 VALUES    
@@ -112,12 +115,14 @@ RETURNING
    id AS     
    control_id,   
    param1,   
-   param2`   
+   param2
+```
 
 что является prepared-запросом и может выполнится средствами метода _PDO::query (<текст запроса>, <массив параметров>).
 
 Таким образом полный код исполнения выше приведенного запроса будет следующим:
-`$dbconnect = _PDO::create($dbdriver);     
+```
+$dbconnect = _PDO::create($dbdriver);     
 $params = [param1 => true, param2 = false];    
 $query = "INSERT INTO    
            controls     
@@ -127,6 +132,7 @@ $query = "INSERT INTO
          RETURNING    
            id AS control_id,    
            [fields]";  
-$result = $dbconnect->query(Service::sql($query, $params), $params);`
+$result = $dbconnect->query(Service::sql($query, $params), $params);
+```
 где `$result` - результат выполнения запроса.
 Разумеется возможны и более простые варианты без параметров с создания подготовленных выражений, а так без подстановки значений шаблон.
