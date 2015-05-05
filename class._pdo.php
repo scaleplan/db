@@ -28,7 +28,7 @@ class _PDO
      * @return _PDO
      * @throws Exception
      */
-    public static function create ($dbdriver = 'pgsql', $login = 'pgsql', $password = 'test', $dbname = 'test', $hostorsock = '/tmp/bouncer', $port = 6432)
+    public static function create ($dbdriver = 'pgsql', $login = 'edu_user', $password = 'asEx8AmXk9', $dbname = 'edu', $hostorsock = '/var/run/postgresql', $port = 5432)
     {
         try
         {
@@ -58,7 +58,7 @@ class _PDO
 
                         case 'pgsql':
                             $dsn = "pgsql:user=$login host=$hostorsock port=$port dbname=$dbname password=$password";
-                            $dbh = new PDO($dsn);
+                            $dbh = new PDO($dsn, null, null, [PDO::ATTR_PERSISTENT => true, PDO::ATTR_STRINGIFY_FETCHES => true]);
                             break;
                     }
                 }
@@ -84,53 +84,40 @@ class _PDO
         }
     }
 
-    /**
-     * Конструктор класса
-     *
-     * @param $dbh
-     * @param $dbdriver
-     */
     private function __construct (&$dbh, &$dbdriver)
     {
         $this->dbh = $dbh;
-        $this->dbdriver = $dbdriver;
-        $this->dbh->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        if (!isset($_SESSION['tables']))
+        try
         {
-            if ($this->dbdriver == 'pgsql')
+            $this->dbdriver = $dbdriver;
+            $this->dbh->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            $this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->dbh->setAttribute(PDO::ATTR_ORACLE_NULLS, PDO::NULL_TO_STRING);
+            //$this->dbh->setAttribute(PDO::ATTR_PERSISTENT , true);
+            //$this->dbh->setAttribute(PDO::ATTR_STRINGIFY_FETCHES , true);
+            if (!isset($_SESSION['tables']))
             {
                 if ($this->tables = $this->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"))
                 {
                     $this->tables[]['table_name'] = 'pg_type';
+                    $_SESSION['tables'] = json_encode($this->tables, JSON_UNESCAPED_UNICODE);
                 }
                 else
                 {
                     throw new _PDOException('Список таблиц пуст');
                 }
             }
-            elseif ($this->dbdriver == 'mysql')
+            else
             {
-                if ($tables = $this->query("SHOW TABLES"))
-                {
-                    foreach ($tables AS $table)
-                    {
-                        $this->tables[]['table_name'] = $table[0];
-                    }
-                }
+                $this->tables = json_decode($_SESSION['tables'], true);
             }
-            $_SESSION['tables'] = json_encode($this->tables, JSON_UNESCAPED_UNICODE);
         }
-        else
+        catch (Exception $e)
         {
-            $this->tables = json_decode($_SESSION['tables'], true);
+            throw $e;
         }
     }
 
-    /**
-     * Возвратит используемый драйвер подключения
-     *
-     * @return bool
-     */
     public function getDBDriver()
     {
         return $this->dbdriver;
@@ -145,134 +132,125 @@ class _PDO
      * @throws Exception
      * @throws PDOException
      */
-    public function query($query, array $params = [])
+    function query($query, array $params = array())
     {
         $execQuery = function(&$params, &$query, &$db, &$row_count)
         {
-            if ($params)
+            try
             {
-                $sth = $db->prepare($query);
-                $sth->execute($params);
+                if ($params)
+                {
+                    $sth = $db->prepare($query);
+                    $sth->execute($params);
+                }
+                else
+                {
+                    $sth = $db->query($query);
+                }
+                if ($sth)
+                {
+                    $row_count += $sth->rowCount();
+                    return $sth;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (Exception $e)
+            {
+                throw $e;
+            }
+        };
+        try
+        {
+            $row_count = 0;
+            if (is_array($query) && isset($params[0]) && count($query) == count($params))
+            {
+                $this->dbh->beginTransaction();
+                foreach ($query AS $key => $value)
+                {
+                    $sth = $execQuery($params[$key], $value, $this->dbh, $row_count);
+                    if ($sth)
+                    {
+                        $row_count += $sth->rowCount();
+                    }
+                }
+                $this->dbh->commit();
             }
             else
             {
-                $sth = $db->query($query);
+                $sth = $execQuery($params, $query, $this->dbh, $row_count);
             }
+
             if ($sth)
             {
-                $row_count += $sth->rowCount();
-                return $sth;
+                $result = $sth->fetchAll();
+                if (count($result) == 0)
+                {
+                    return $row_count;
+                }
+                else
+                {
+                    //var_dump($result);
+                    return $result;
+                }
             }
             else
             {
                 return false;
             }
-        };
+        }
+        catch (PDOException $e)
+        {
+            throw $e;
+        }
+    }
 
-        $row_count = 0;
-        if (is_array($query) && isset($params[0]) && count($query) == count($params))
+    function beginTransaction ()
+    {
+        try
         {
             $this->dbh->beginTransaction();
-            foreach ($query AS $key => $value)
-            {
-                $sth = $execQuery($params[$key], $value, $this->dbh, $row_count);
-                if ($sth)
-                {
-                    $row_count += $sth->rowCount();
-                }
-            }
-            $this->dbh->commit();
         }
-        else
-        {
-            $sth = $execQuery($params, $query, $this->dbh, $row_count);
-        }
-
-        if ($sth)
-        {
-            $result = $sth->fetchAll();
-            if (count($result) == 0)
-            {
-                return $row_count;
-            }
-            else
-            {
-                return $result;
-            }
-        }
-        else
-        {
-            return false;
-        }
-    }
-
-    /**
-     * Стартовать транзакцию (исключение подавляется для предотвращения прекращения вополнения скрипта вследствие попытки открытия транзакции внутри другой транзакции)
-     *
-     * @return mixed
-     */
-    public function beginTransaction ()
-    {
-        try
-        {
-            return $this->dbh->beginTransaction();
-        }
-        catch (PDOException $e)
+        catch (Exception $e)
         {
 
         }
     }
 
-    /**
-     * Закоммитить транзакцию
-     */
-    public function commit ()
+    function commit ()
     {
         try
         {
             $this->dbh->commit();
         }
-        catch (PDOException $e)
+        catch (Exception $e)
         {
 
         }
     }
 
-    /**
-     * Откатить транзакцию
-     */
-    public function rollBack ()
+    function rollBack ()
     {
         try
         {
             $this->dbh->rollBack();
         }
-        catch (PDOException $e)
+        catch (Exception $e)
         {
 
         }
     }
 
     /**
-     * Установить атрибут на подключение
-     *
-     * @param $attribute
-     * @param $value
-     * @return mixed
-     */
-    public function setAttribute ($attribute, $value)
-    {
-        return $this->dbh->setAttribute($attribute, $value);
-    }
-
-    /**
-     * Возвращаем имена таблиц использующихся в запросе
+     * Возвращаем имена таблиц использующихся в запросе на изменение
      *
      * @param bool $query
      * @return array|string
      * @throws _PDOException
      */
-    public function getTables ($query)
+    function getTables ($query)
     {
         $tables = false;
         foreach ($this->tables AS $table)
@@ -283,15 +261,9 @@ class _PDO
         return $tables;
     }
 
-    /**
-     * Если запрос является запросом на изменение, то возвращает учавствующие в запросе таблицы, иначе возвратит FALSE
-     *
-     * @param $query
-     * @return array|bool|string
-     */
     function getEditTables ($query)
     {
-        if (preg_match('/^(update|insert\sinto|delete)/i', $query))
+        if (preg_match('/(update|insert\sinto|delete)/i', $query))
         {
             return $this->getTables($query);
         }
@@ -302,5 +274,3 @@ class _PDO
     }
 
 }
-
-?>
