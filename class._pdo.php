@@ -28,93 +28,81 @@ class _PDO
      * @return _PDO
      * @throws Exception
      */
-    public static function create ($dbdriver = 'pgsql', $login = 'edu_user', $password = 'asEx8AmXk9', $dbname = 'edu', $hostorsock = '/var/run/postgresql', $port = 5432)
+    public static function create ($dbdriver = DB_DRIVER, $login = DB_LOGIN, $password = DB_PASSWORD, $dbname = DB_NAME, $hostorsock = DB_SOCKET, $port = DB_PORT)
     {
-        try
+        if (!self::$instance)
         {
-            if (!self::$instance)
+            if (extension_loaded('pdo_'.$dbdriver))
             {
-                if (file_exists($_SERVER['DOCUMENT_ROOT'].'/confs/db.ini') && $init = parse_ini_file($_SERVER['DOCUMENT_ROOT'].'/confs/db.ini'))
+                $dbh = false;
+                switch ($dbdriver)
                 {
-                    extract($init);
-                }
+                    case 'mysql':
+                        if (!$port)
+                        {
+                            $dsn = "mysql: dbname=$dbname; unix_socket=$hostorsock";
+                        }
+                        else
+                        {
+                            $dsn = "mysql:dbname=$dbname; host=$hostorsock; port=$port";
+                        }
+                        $dbh = new PDO($dsn, $login, $password);
+                        break;
 
-                if (extension_loaded('pdo_'.$dbdriver))
-                {
-                    $dbh = false;
-                    switch ($dbdriver)
-                    {
-                        case 'mysql':
-                            if (!$port)
-                            {
-                                $dsn = "mysql: dbname=$dbname; unix_socket=$hostorsock";
-                            }
-                            else
-                            {
-                                $dsn = "mysql:dbname=$dbname; host=$hostorsock; port=$port";
-                            }
-                            $dbh = new PDO($dsn, $login, $password);
-                            break;
-
-                        case 'pgsql':
-                            $dsn = "pgsql:user=$login host=$hostorsock port=$port dbname=$dbname password=$password";
-                            $dbh = new PDO($dsn, null, null, [PDO::ATTR_PERSISTENT => true, PDO::ATTR_STRINGIFY_FETCHES => true]);
-                            break;
-                    }
-                }
-                else
-                {
-                    throw new _PDOException("Не найдены подходящие расширения для работы с $dbdriver");
-                }
-
-                if ($dbh)
-                {
-                    self::$instance = new _PDO ($dbh, $dbdriver);
-                }
-                else
-                {
-                    throw new _PDOException('Не удалось подключение к базе данных');
-                }
-            }
-            return self::$instance;
-        }
-        catch (Exception $e)
-        {
-            throw $e;
-        }
-    }
-
-    private function __construct (&$dbh, &$dbdriver)
-    {
-        $this->dbh = $dbh;
-        try
-        {
-            $this->dbdriver = $dbdriver;
-            $this->dbh->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            $this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->dbh->setAttribute(PDO::ATTR_ORACLE_NULLS, PDO::NULL_TO_STRING);
-            //$this->dbh->setAttribute(PDO::ATTR_PERSISTENT , true);
-            //$this->dbh->setAttribute(PDO::ATTR_STRINGIFY_FETCHES , true);
-            if (!isset($_SESSION['tables']))
-            {
-                if ($this->tables = $this->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"))
-                {
-                    $this->tables[]['table_name'] = 'pg_type';
-                    $_SESSION['tables'] = json_encode($this->tables, JSON_UNESCAPED_UNICODE);
-                }
-                else
-                {
-                    throw new _PDOException('Список таблиц пуст');
+                    case 'pgsql':
+                        $dsn = "pgsql:user=$login host=$hostorsock port=$port dbname=$dbname password=$password";
+                        $dbh = new PDO($dsn, null, null, [PDO::ATTR_PERSISTENT => true, PDO::ATTR_STRINGIFY_FETCHES => true]);
+                        break;
                 }
             }
             else
             {
-                $this->tables = json_decode($_SESSION['tables'], true);
+                throw new _PDOException("Не найдены подходящие расширения для работы с $dbdriver");
+            }
+
+            if ($dbh)
+            {
+                self::$instance = new _PDO ($dbh, $dbdriver, $dbname);
+            }
+            else
+            {
+                throw new _PDOException('Не удалось подключение к базе данных');
             }
         }
-        catch (Exception $e)
+        return self::$instance;
+    }
+
+    private function __construct ($dbh, $dbdriver, $dbname)
+    {
+        $this->dbh = $dbh;
+        $this->dbdriver = $dbdriver;
+        $this->dbh->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        $this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->dbh->setAttribute(PDO::ATTR_ORACLE_NULLS, PDO::NULL_TO_STRING);
+        //$this->dbh->setAttribute(PDO::ATTR_PERSISTENT , true);
+        //$this->dbh->setAttribute(PDO::ATTR_STRINGIFY_FETCHES , true);
+        if (!isset($_SESSION['tables']))
         {
-            throw $e;
+            if ($dbdriver == 'pgsql')
+            {
+                $this->tables = $this->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+            }
+            else
+            {
+                $this->tables = $this->query("SELECT table_name FROM information_schema.tables WHERE table_schema = '$dbname'");
+            }
+            if ($this->tables)
+            {
+                $_SESSION['tables'] = json_encode($this->tables, JSON_UNESCAPED_UNICODE);
+            }
+            else
+            {
+                throw new _PDOException('Список таблиц пуст');
+            }
+        }
+        else
+        {
+            $this->tables = json_decode($_SESSION['tables'], true);
         }
     }
 
@@ -162,48 +150,41 @@ class _PDO
                 throw $e;
             }
         };
-        try
+        $row_count = 0;
+        if (is_array($query) && isset($params[0]) && count($query) == count($params))
         {
-            $row_count = 0;
-            if (is_array($query) && isset($params[0]) && count($query) == count($params))
+            $this->dbh->beginTransaction();
+            foreach ($query AS $key => $value)
             {
-                $this->dbh->beginTransaction();
-                foreach ($query AS $key => $value)
+                $sth = $execQuery($params[$key], $value, $this->dbh, $row_count);
+                if ($sth)
                 {
-                    $sth = $execQuery($params[$key], $value, $this->dbh, $row_count);
-                    if ($sth)
-                    {
-                        $row_count += $sth->rowCount();
-                    }
+                    $row_count += $sth->rowCount();
                 }
-                $this->dbh->commit();
             }
-            else
-            {
-                $sth = $execQuery($params, $query, $this->dbh, $row_count);
-            }
+            $this->dbh->commit();
+        }
+        else
+        {
+            $sth = $execQuery($params, $query, $this->dbh, $row_count);
+        }
 
-            if ($sth)
+        if ($sth)
+        {
+            $result = $sth->fetchAll();
+            if (count($result) == 0)
             {
-                $result = $sth->fetchAll();
-                if (count($result) == 0)
-                {
-                    return $row_count;
-                }
-                else
-                {
-                    //var_dump($result);
-                    return $result;
-                }
+                return $row_count;
             }
             else
             {
-                return false;
+                //var_dump($result);
+                return $result;
             }
         }
-        catch (PDOException $e)
+        else
         {
-            throw $e;
+            return false;
         }
     }
 
@@ -213,7 +194,7 @@ class _PDO
         {
             $this->dbh->beginTransaction();
         }
-        catch (Exception $e)
+        catch (PDOException $e)
         {
 
         }
@@ -225,7 +206,7 @@ class _PDO
         {
             $this->dbh->commit();
         }
-        catch (Exception $e)
+        catch (PDOException $e)
         {
 
         }
@@ -237,7 +218,7 @@ class _PDO
         {
             $this->dbh->rollBack();
         }
-        catch (Exception $e)
+        catch (PDOException $e)
         {
 
         }
@@ -263,7 +244,7 @@ class _PDO
 
     function getEditTables ($query)
     {
-        if (preg_match('/(update|insert\sinto|delete)/i', $query))
+        if (preg_match('/(UPDATE|INSERT\sINTO|DELETE)/', $query))
         {
             return $this->getTables($query);
         }
