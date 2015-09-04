@@ -25,6 +25,7 @@ class _PDO
      * @param string $login - логин для подключения к БД
      * @param string $password - пароль для подключения к БД
      * @param string $dbname - имя базы данных
+     *
      * @return _PDO
      * @throws Exception
      */
@@ -72,6 +73,13 @@ class _PDO
         return self::$instance;
     }
 
+    /**
+     * Конструктор класса
+     *
+     * @param $dbh - подключение к БД
+     * @param $dbdriver - используемый драйвер СУБД ('pgsql'|'mysql')
+     * @param $dbname - Имя БД
+     */
     private function __construct ($dbh, $dbdriver, $dbname)
     {
         $this->dbh = $dbh;
@@ -106,6 +114,11 @@ class _PDO
         }
     }
 
+    /**
+     * Получить имя драйвера СУБД
+     *
+     * @return bool
+     */
     public function getDBDriver()
     {
         return $this->dbdriver;
@@ -114,8 +127,9 @@ class _PDO
     /**
      * Сделать запрос к БД, поддерживает подготовленные выражения
      *
-     * @param $query
-     * @param array $params
+     * @param $query - запрос
+     * @param array $params - параметры запроса
+     *
      * @return int
      * @throws Exception
      * @throws PDOException
@@ -178,7 +192,6 @@ class _PDO
             }
             else
             {
-                //var_dump($result);
                 return $result;
             }
         }
@@ -188,6 +201,9 @@ class _PDO
         }
     }
 
+    /**
+     * Начать транзакцию
+     */
     function beginTransaction ()
     {
         try
@@ -200,6 +216,9 @@ class _PDO
         }
     }
 
+    /**
+     * Фиксировать транзакцию
+     */
     function commit ()
     {
         try
@@ -212,6 +231,9 @@ class _PDO
         }
     }
 
+    /**
+     * Откатить транцакцию
+     */
     function rollBack ()
     {
         try
@@ -225,9 +247,10 @@ class _PDO
     }
 
     /**
-     * Возвращаем имена таблиц использующихся в запросе на изменение
+     * Возвращаем имена таблиц использующихся в запросе
      *
-     * @param bool $query
+     * @param bool $query - запрос
+     *
      * @return array|string
      * @throws _PDOException
      */
@@ -242,6 +265,13 @@ class _PDO
         return $tables;
     }
 
+    /**
+     * Возвращаем имена таблиц использующихся в запросе только для запросов на изменение
+     *
+     * @param $query - запрос
+     *
+     * @return array|bool|string
+     */
     function getEditTables ($query)
     {
         if (preg_match('/(UPDATE|INSERT\sINTO|DELETE)/', $query))
