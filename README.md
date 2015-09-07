@@ -1,6 +1,6 @@
 _PDO
 ====
-#Описание методов
+##Описание методов
 ###Класс class._pdo.php
 #### create
 `public static function create ($dbdriver = < pgsql| mysql >, $login = 'test', $password = 'test', $dbname = 'test', $hostorsock = '< /path/to/socket | db host >', $port = 6432)`   
@@ -60,7 +60,7 @@ _PDO
 
 ------------------------------------------------------------------------------------------------------------
 
-#Как использовать
+##Как использовать
 ```
 $dbconnect = _PDO::create($dbdriver);     
 $params = [param1 => true, param2 = false];    
