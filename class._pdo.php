@@ -14,6 +14,7 @@ class _PDO
     private $dbdriver = false;
     private $tables = false;
 
+    private static $dsn = false;
     private static $instance = false;
 
     /**
@@ -41,18 +42,23 @@ class _PDO
                     case 'mysql':
                         if (!$port)
                         {
-                            $dsn = "mysql: dbname=$dbname; unix_socket=$hostorsock";
+                            self::$dsn = "dbname=$dbname; unix_socket=$hostorsock";
                         }
                         else
                         {
-                            $dsn = "mysql:dbname=$dbname; host=$hostorsock; port=$port";
+                            self::$dsn = "dbname=$dbname; host=$hostorsock; port=$port";
                         }
-                        $dbh = new PDO($dsn, $login, $password);
+                        $dbh = new PDO('mysql:' . self::$dsn, $login, $password);
                         break;
 
                     case 'pgsql':
-                        $dsn = "pgsql:user=$login host=$hostorsock port=$port dbname=$dbname password=$password";
-                        $dbh = new PDO($dsn, null, null, [PDO::ATTR_PERSISTENT => true, PDO::ATTR_STRINGIFY_FETCHES => true]);
+                        self::$dsn = "user=$login host=$hostorsock port=$port dbname=$dbname password=$password";
+                        $dbh = new PDO('pgsql:' . self::$dsn, null, null, [PDO::ATTR_PERSISTENT => true,
+                                                                           PDO::ATTR_STRINGIFY_FETCHES => true,
+                                                                           PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                                                                           PDO::ATTR_EMULATE_PREPARES => DB_EMULATE_PREPARES,
+                                                                           PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                                                                           PDO::ATTR_ORACLE_NULLS, PDO::NULL_TO_STRING]);
                         break;
                 }
             }
@@ -84,9 +90,6 @@ class _PDO
     {
         $this->dbh = $dbh;
         $this->dbdriver = $dbdriver;
-        $this->dbh->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        $this->dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $this->dbh->setAttribute(PDO::ATTR_ORACLE_NULLS, PDO::NULL_TO_STRING);
         //$this->dbh->setAttribute(PDO::ATTR_PERSISTENT , true);
         //$this->dbh->setAttribute(PDO::ATTR_STRINGIFY_FETCHES , true);
         if (!isset($_SESSION['tables']))
@@ -125,6 +128,16 @@ class _PDO
     }
 
     /**
+     * Вернет подключение к базе данных
+     *
+     * @return bool
+     */
+    public function getDBH ()
+    {
+        return $this->dbh;
+    }
+
+    /**
      * Сделать запрос к БД, поддерживает подготовленные выражения
      *
      * @param $query - запрос
@@ -134,34 +147,27 @@ class _PDO
      * @throws Exception
      * @throws PDOException
      */
-    function query($query, array $params = array())
+    public function query($query, array $params = [])
     {
-        $execQuery = function(&$params, &$query, &$db, &$row_count)
+        $execQuery = function() use (&$params, &$query, &$row_count)
         {
-            try
+            if ($params)
             {
-                if ($params)
-                {
-                    $sth = $db->prepare($query);
-                    $sth->execute($params);
-                }
-                else
-                {
-                    $sth = $db->query($query);
-                }
-                if ($sth)
-                {
-                    $row_count += $sth->rowCount();
-                    return $sth;
-                }
-                else
-                {
-                    return false;
-                }
+                $sth = $this->dbh->prepare($query);
+                $sth->execute($params);
             }
-            catch (Exception $e)
+            else
             {
-                throw $e;
+                $sth = $this->dbh->query($query);
+            }
+            if ($sth)
+            {
+                $row_count += $sth->rowCount();
+                return $sth;
+            }
+            else
+            {
+                return false;
             }
         };
         $row_count = 0;
@@ -170,7 +176,7 @@ class _PDO
             $this->dbh->beginTransaction();
             foreach ($query AS $key => $value)
             {
-                $sth = $execQuery($params[$key], $value, $this->dbh, $row_count);
+                $sth = $execQuery();
                 if ($sth)
                 {
                     $row_count += $sth->rowCount();
@@ -180,7 +186,7 @@ class _PDO
         }
         else
         {
-            $sth = $execQuery($params, $query, $this->dbh, $row_count);
+            $sth = $execQuery();
         }
 
         if ($sth)
@@ -204,7 +210,7 @@ class _PDO
     /**
      * Начать транзакцию
      */
-    function beginTransaction ()
+    public function beginTransaction ()
     {
         try
         {
@@ -219,7 +225,7 @@ class _PDO
     /**
      * Фиксировать транзакцию
      */
-    function commit ()
+    public function commit ()
     {
         try
         {
@@ -234,7 +240,7 @@ class _PDO
     /**
      * Откатить транцакцию
      */
-    function rollBack ()
+    public function rollBack ()
     {
         try
         {
@@ -254,7 +260,7 @@ class _PDO
      * @return array|string
      * @throws _PDOException
      */
-    function getTables ($query)
+    private function getTables ($query)
     {
         $tables = false;
         foreach ($this->tables AS $table)
@@ -272,7 +278,7 @@ class _PDO
      *
      * @return array|bool|string
      */
-    function getEditTables ($query)
+    public function getEditTables ($query)
     {
         if (preg_match('/(UPDATE|INSERT\sINTO|DELETE)/', $query))
         {
@@ -282,6 +288,92 @@ class _PDO
         {
             return false;
         }
+    }
+
+    public function parallelExecute(array $batch)
+    {
+        if (!count($this->query("select proname from pg_proc where proname = 'execute_multiple'")))
+        {
+            $sql = file_get_contents('execute_multiple.sql');
+            $this->dbh->exec($sql);
+        }
+        $query = 'SELECT execute_multiple(ARRAY[';
+        foreach ($batch AS $t)
+        {
+            $query .= "'" . implode(';', $t) . "',";
+        }
+        $query = trim($query, ',');
+        $count = count($batch);
+
+        $count = DB_MAX_PARALLEL_CONNECTS <= $count ? DB_MAX_PARALLEL_CONNECTS : $count;
+        $query .= "], $count, '" . self::$dsn . "') AS failed";
+
+        $result = $this->query($query);
+
+        $failed = explode(',', $result[0]['failed']);
+        foreach ($batch AS $key => $value)
+        {
+            if (!in_array($key + 1, $failed))
+            {
+                unset($batch[$key]);
+            }
+        }
+
+        return $batch;
+    }
+
+    private function createQStrFromBatch (array $batch)
+    {
+        $query_str = '';
+        foreach ($batch AS $t)
+        {
+            if (count($t) > 1)
+            {
+                $query_str .= 'BEGIN;' . implode(';', $t) . ';' . 'COMMIT;';
+            }
+        }
+        return $query_str;
+    }
+
+    public function asyncBatch(array $batch)
+    {
+
+        if ($db = pg_connect(self::$dsn))
+        {
+            $result = pg_send_query($db, $this->createQStrFromBatch($batch));
+
+            pg_close($db);
+
+            if (!$result)
+            {
+                throw new _PDOException('Не удалось отправить пакет запросов на выполнение');
+            }
+            return true;
+        }
+        else
+        {
+            throw new _PDOException('Не удалось создать pg_-подключение');
+        }
+    }
+
+    public function execBatch (array $batch)
+    {
+        $this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+        try
+        {
+            $this->dbh->exec($this->createQStrFromBatch($batch));
+        }
+        catch (PDOException $e)
+        {
+            $this->dbh->exec('ROLLBACK');
+            throw new _PDOException('Пакет запросов выполнен с ошибкой: ' . $e->getMessage());
+        }
+        finally
+        {
+            $this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, DB_EMULATE_PREPARES);
+        }
+
+        return true;
     }
 
 }
