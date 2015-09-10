@@ -290,6 +290,13 @@ class _PDO
         }
     }
 
+    /**
+     * Выполнить параллельно пакет транзикций
+     *
+     * @param array $batch - массив транзакций
+     *
+     * @return array
+     */
     public function parallelExecute(array $batch)
     {
         if (!count($this->query("select proname from pg_proc where proname = 'execute_multiple'")))
@@ -335,6 +342,14 @@ class _PDO
         return $query_str;
     }
 
+    /**
+     * Отправить асинхронно пакет транзакций на сервер
+     *
+     * @param array $batch - массив транзакций
+     *
+     * @return bool
+     * @throws _PDOException
+     */
     public function asyncBatch(array $batch)
     {
 
@@ -356,6 +371,14 @@ class _PDO
         }
     }
 
+    /**
+     * Выполнить пакет транзакций с проверкой результата выполнения
+     *
+     * @param array $batch - массив транзакций
+     *
+     * @return bool
+     * @throws _PDOException
+     */
     public function execBatch (array $batch)
     {
         $this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
