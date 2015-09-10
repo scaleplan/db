@@ -85,6 +85,8 @@ class _PDO
      * @param $dbh - подключение к БД
      * @param $dbdriver - используемый драйвер СУБД ('pgsql'|'mysql')
      * @param $dbname - Имя БД
+     *
+     * @throws _PDOException
      */
     private function __construct ($dbh, $dbdriver, $dbname)
     {
