@@ -41,7 +41,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $driver = $dbconnect-&gt;getDBDriver();
+    $driver = $dbconnect->getDBDriver();
 
 <br>
 #####getDBH
@@ -56,7 +56,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbh = $dbconnect-&gt;getDBH();
+    $dbh = $dbconnect->getDBH();
 
 <br>
 #####query
@@ -75,7 +75,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect-&gt;query("SELECT table\_name FROM information\_schema.tables WHERE table\_schema = 'public'");
+    $dbconnect->query("SELECT table\_name FROM information\_schema.tables WHERE table\_schema = 'public'");
 
 <br>
 #####beginTransaction
@@ -90,7 +90,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect-&gt;beginTransaction();
+    $dbconnect->beginTransaction();
 
 <br>
 #####commit
@@ -105,7 +105,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect-&gt;commit();
+    $dbconnect->commit();
 
 <br>
 #####rollBack
@@ -120,7 +120,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect-&gt;rollBack();
+    $dbconnect->rollBack();
 
 <br>
 #####getTables
@@ -137,7 +137,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $tables = $dbconnect-&gt;getTables(“SELECT \* FROM table”);
+    $tables = $dbconnect->getTables(“SELECT \* FROM table”);
 
 <br>
 #####getEditTables
@@ -154,7 +154,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $tables = $dbconnect-&gt;getEditTables(“INSERT INTO table VALUES (1, 2, 3)”);
+    $tables = $dbconnect->getEditTables(“INSERT INTO table VALUES (1, 2, 3)”);
 
     // table
 
@@ -173,7 +173,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $failed = $dbconnect-&gt;parallelExecute(\[“INSERT INTO table VALUES (1, 2, 3)”, “UPDATE table2 SET field1 = ‘value1’, field2 = ‘value2’\]);
+    $failed = $dbconnect->parallelExecute(\[“INSERT INTO table VALUES (1, 2, 3)”, “UPDATE table2 SET field1 = ‘value1’, field2 = ‘value2’\]);
 
 <br>
 #####createQStrFromBatch
@@ -190,7 +190,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $str = $dbconnect-&gt;dbh-&gt;exec($this-&gt;createQStrFromBatch($batch));
+    $str = $dbconnect->dbh->exec($this->createQStrFromBatch($batch));
 
 <br>
 #####asyncBatch
@@ -207,7 +207,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect-&gt;asyncBatch(\[‘INSERT INTO test VALUES (1, 21)’,
+    $dbconnect->asyncBatch(\[‘INSERT INTO test VALUES (1, 21)’,
 
     > ‘INSERT INTO test VALUES (1, 22)’,
     >
@@ -230,7 +230,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect-&gt;execBatch(\[‘INSERT INTO test VALUES (1, 21)’,
+    $dbconnect->execBatch(\[‘INSERT INTO test VALUES (1, 21)’,
 
     > ‘INSERT INTO test VALUES (1, 22)’,
     >
@@ -244,7 +244,7 @@ Singleton для объекта класса - статический метод
 
     $dbconnect = \_PDO::create();
     
-    $params = \[param1 =&gt; true, param2 = false\];
+    $params = \[param1 => true, param2 = false\];
     
     $query = "INSERT INTO
     
@@ -262,6 +262,6 @@ Singleton для объекта класса - статический метод
     
     param2";
     
-    $result = $dbconnect-&gt;query($query, $params);
+    $result = $dbconnect->query($query, $params);
 
 где $result - результат выполнения запроса.
