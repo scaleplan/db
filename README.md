@@ -1,8 +1,8 @@
 ##Описание методов
 
-####**Класс class.\_pdo.php**
+####Класс class.\_pdo.php
 
-####create
+#####create
 
     public static function create ($dbdriver = *DB\_DRIVER*, $login = *DB\_LOGIN*, $password = *DB\_PASSWORD*, $dbname = *DB\_NAME*, $hostorsock = *DB\_SOCKET*, $port = *DB\_PORT*)
 
@@ -29,7 +29,7 @@ Singleton для объекта класса - статический метод
     $dbconnect = \_PDO::create($dbdriver);
     
 <br>
-####getDBDriver
+#####getDBDriver
 
     public function getDBDriver ()
 
@@ -44,7 +44,7 @@ Singleton для объекта класса - статический метод
     $driver = $dbconnect-&gt;getDBDriver();
 
 <br>
-####getDBH
+#####getDBH
 
     public function getDBDriver ()
 
@@ -59,7 +59,7 @@ Singleton для объекта класса - статический метод
     $dbh = $dbconnect-&gt;getDBH();
 
 <br>
-####query
+#####query
 
     public function query($query, array $params = \[\])
 
@@ -78,7 +78,7 @@ Singleton для объекта класса - статический метод
     $dbconnect-&gt;query("SELECT table\_name FROM information\_schema.tables WHERE table\_schema = 'public'");
 
 <br>
-####beginTransaction
+#####beginTransaction
 
     public function beginTransaction ()
 
@@ -93,7 +93,7 @@ Singleton для объекта класса - статический метод
     $dbconnect-&gt;beginTransaction();
 
 <br>
-####commit
+#####commit
 
     public function commit ()
 
@@ -108,7 +108,7 @@ Singleton для объекта класса - статический метод
     $dbconnect-&gt;commit();
 
 <br>
-####rollBack
+#####rollBack
 
     public function rollBack ()
 
@@ -123,7 +123,7 @@ Singleton для объекта класса - статический метод
     $dbconnect-&gt;rollBack();
 
 <br>
-####getTables
+#####getTables
 
     private function getTables ($query)
 
@@ -140,7 +140,7 @@ Singleton для объекта класса - статический метод
     $tables = $dbconnect-&gt;getTables(“SELECT \* FROM table”);
 
 <br>
-####getEditTables
+#####getEditTables
 
     public function getEditTables ($query)
 
@@ -159,7 +159,7 @@ Singleton для объекта класса - статический метод
     // table
 
 <br>
-####parallelExecute
+#####parallelExecute
 
     public function parallelExecute(array $batch)
 
@@ -176,7 +176,7 @@ Singleton для объекта класса - статический метод
     $failed = $dbconnect-&gt;parallelExecute(\[“INSERT INTO table VALUES (1, 2, 3)”, “UPDATE table2 SET field1 = ‘value1’, field2 = ‘value2’\]);
 
 <br>
-####createQStrFromBatch
+#####createQStrFromBatch
 
     private function createQStrFromBatch (array $batch)
 
@@ -193,7 +193,7 @@ Singleton для объекта класса - статический метод
     $str = $dbconnect-&gt;dbh-&gt;exec($this-&gt;createQStrFromBatch($batch));
 
 <br>
-####asyncBatch
+#####asyncBatch
 
     public function asyncBatch(array $batch)
 
@@ -216,7 +216,7 @@ Singleton для объекта класса - статический метод
     > ‘INSERT INTO test VALUES (3, 71)’\]);
 
 <br>
-####execBatch
+#####execBatch
 
     public function execBatch (array $batch)
 
@@ -240,7 +240,7 @@ Singleton для объекта класса - статический метод
 
 <br>
 ***
-####**Как использовать**
+####Как использовать
 
     $dbconnect = \_PDO::create();
     
