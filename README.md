@@ -11,7 +11,12 @@ _PDO представляет собой класс-обертку для вза
 
 #####create
 
-    public static function create ($dbdriver = *DB\_DRIVER*, $login = *DB\_LOGIN*, $password = *DB\_PASSWORD*, $dbname = *DB\_NAME*, $hostorsock = *DB\_SOCKET*, $port = *DB\_PORT*)
+    public static function create ($dbdriver = DB_DRIVER, 
+                                   $login = DB_LOGIN, 
+                                   $password = DB_PASSWORD, 
+                                   $dbname = DB_NAME, 
+                                   $hostorsock = DB_SOCKET, 
+                                   $port = DB_PORT)
 
 **Описание:**
 
@@ -33,7 +38,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect = \_PDO::create($dbdriver);
+    $dbconnect = _PDO::create($dbdriver);
     
 <br>
 #####getDBDriver
@@ -68,7 +73,7 @@ Singleton для объекта класса - статический метод
 <br>
 #####query
 
-    public function query($query, array $params = \[\])
+    public function query($query, array $params = [])
 
 **Описание:**
 
@@ -82,7 +87,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect->query("SELECT table\_name FROM information\_schema.tables WHERE table\_schema = 'public'");
+    $dbconnect->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
 
 <br>
 #####beginTransaction
@@ -144,7 +149,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $tables = $dbconnect->getTables(“SELECT \* FROM table”);
+    $tables = $dbconnect->getTables(“SELECT * FROM table”);
 
 <br>
 #####getEditTables
@@ -162,7 +167,6 @@ Singleton для объекта класса - статический метод
 **Пример использования:**
 
     $tables = $dbconnect->getEditTables(“INSERT INTO table VALUES (1, 2, 3)”);
-
     // table
 
 <br>
@@ -180,7 +184,7 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $failed = $dbconnect->parallelExecute(\[“INSERT INTO table VALUES (1, 2, 3)”, “UPDATE table2 SET field1 = ‘value1’, field2 = ‘value2’\]);
+    $failed = $dbconnect->parallelExecute([“INSERT INTO table VALUES (1, 2, 3)”, “UPDATE table2 SET field1 = ‘value1’, field2 = ‘value2’]);
 
 <br>
 #####createQStrFromBatch
@@ -214,13 +218,10 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect->asyncBatch(\[‘INSERT INTO test VALUES (1, 21)’,
-
-    > ‘INSERT INTO test VALUES (1, 22)’,
-    >
-    > ‘INSERT INTO test VALUES (1, 23)’,
-    >
-    > ‘INSERT INTO test VALUES (3, 71)’\]);
+    $dbconnect->asyncBatch([‘INSERT INTO test VALUES (1, 21)’,
+                            ‘INSERT INTO test VALUES (1, 22)’,
+                            ‘INSERT INTO test VALUES (1, 23)’,
+                            ‘INSERT INTO test VALUES (3, 71)’]);
 
 <br>
 #####execBatch
@@ -237,35 +238,26 @@ Singleton для объекта класса - статический метод
 
 **Пример использования:**
 
-    $dbconnect->execBatch(\[‘INSERT INTO test VALUES (1, 21)’,
-                            ‘INSERT INTO test VALUES (1, 22)’,
-                            ‘INSERT INTO test VALUES (1, 23)’,
-                            ‘INSERT INTO test VALUES (3, 71)’\]);
+    $dbconnect->execBatch([‘INSERT INTO test VALUES (1, 21)’,
+                           ‘INSERT INTO test VALUES (1, 22)’,
+                           ‘INSERT INTO test VALUES (1, 23)’,
+                           ‘INSERT INTO test VALUES (3, 71)’]);
 
 <br>
 ***
 ####Как использовать
 
-    $dbconnect = \_PDO::create();
-    
-    $params = \[param1 => true, param2 = false\];
-    
+    $dbconnect = _PDO::create();
+    $params = [param1 => true, param2 = false\];
     $query = "INSERT INTO
-    
-    test
-    
-    (param1, param2)
-    
-    VALUES
-    
-    (:param1, :param2)
-    
-    RETURNING
-    
-    param1,
-    
-    param2";
-    
+                test
+                (param1, param2)
+              VALUES
+                (:param1,
+                 :param2)
+              RETURNING
+                param1,
+                param2";
     $result = $dbconnect->query($query, $params);
 
 где $result - результат выполнения запроса.
