@@ -238,12 +238,9 @@ Singleton для объекта класса - статический метод
 **Пример использования:**
 
     $dbconnect->execBatch(\[‘INSERT INTO test VALUES (1, 21)’,
-
-    > ‘INSERT INTO test VALUES (1, 22)’,
-    >
-    > ‘INSERT INTO test VALUES (1, 23)’,
-    >
-    > ‘INSERT INTO test VALUES (3, 71)’\]);
+                            ‘INSERT INTO test VALUES (1, 22)’,
+                            ‘INSERT INTO test VALUES (1, 23)’,
+                            ‘INSERT INTO test VALUES (3, 71)’\]);
 
 <br>
 ***
