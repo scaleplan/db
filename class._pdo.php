@@ -8,6 +8,9 @@
 
 class _PDOException extends Exception { }
 
+/**
+ * Class _PDO
+ */
 class _PDO
 {
     private $dbh = false;
@@ -56,7 +59,7 @@ class _PDO
                         $dbh = new PDO('pgsql:' . self::$dsn, null, null, [PDO::ATTR_PERSISTENT => true,
                                                                            PDO::ATTR_STRINGIFY_FETCHES => true,
                                                                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                                                                           PDO::ATTR_EMULATE_PREPARES => DB_EMULATE_PREPARES,
+                                                                           PDO::ATTR_EMULATE_PREPARES => DB_PERSISTENT,
                                                                            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                                                                            PDO::ATTR_ORACLE_NULLS, PDO::NULL_TO_STRING]);
                         break;
@@ -124,7 +127,7 @@ class _PDO
      *
      * @return bool
      */
-    public function getDBDriver()
+    public function getDBDriver ()
     {
         return $this->dbdriver;
     }
@@ -331,6 +334,12 @@ class _PDO
         return $batch;
     }
 
+    /**
+     * Формирует строку для асинхронного выполнения методами asyncBatch и execBatch
+     *
+     * @param array $batch
+     * @return string
+     */
     private function createQStrFromBatch (array $batch)
     {
         $query_str = '';

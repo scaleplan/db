@@ -1,4 +1,10 @@
 ##Описание методов
+<<<<<<< .mine
+###Класс class._pdo.php
+#### create
+`public static function create ($dbdriver = < pgsql| mysql >, $login = 'test', $password = 'test', $dbname = 'test', $hostorsock = '< /path/to/socket | db host >', $port = 6432)`   
+#####Singleton для объекта класса. Статический метод возвращающий объект класса _PDO  
+=======
 
 ####Класс class.\_pdo.php
 
@@ -10,14 +16,27 @@
 
 Singleton для объекта класса - статический метод, возвращающий объект класса \_PDO. По умолчанию параметры берут из соответствующих констант. Объявление которых может содержаться, например, в конфигурационном файле.
 
+>>>>>>> .r37
 **Параметры:**
 
 -   *$dbdriver* - драйвер доступа к СУБД. На данный момент поддерживаются СУБД MySQL и PostgreSQL, допустимые значения: pgsql, mysql;
 
+<<<<<<< .mine
+####getDBDriver
+`public function getDBDriver()`   
+#####Возвращает текущий драйвер подключения к БД  
+**Параметры:** нет.    
+=======
 -   *$login* - логин пользователя для доступа к базе данных;
+>>>>>>> .r37
 
 -   *$password* - пароль доступа к базу данных;
 
+<<<<<<< .mine
+####query
+`public function query($query, array $params = [])`   
+#####Выполняет запрос к БД и возвращает результат    
+=======
 -   *$dbname* - имя базы данных, к которой мы подключаемся;
 
 -   *$hostorsock* - имя, ip-адрес хоста или UNIX-сокет для подключения к базе данных;
@@ -67,20 +86,55 @@ Singleton для объекта класса - статический метод
 
 Выполняет запрос к БД и возвращает результат. Поддерживает регулярные выражения.
 
+>>>>>>> .r37
 **Параметры:**
 
 -   *$query* - текст запроса;
 
+<<<<<<< .mine
+####beginTransaction
+`public function beginTransaction ()`   
+#####Стартует транзакцию  
+=======
 -   *$params* - параметры запроса (для prepared-запросов).
+>>>>>>> .r37
 
+<<<<<<< .mine
+####commit
+`public function commit ()`   
+#####Коммитит транзакцию  
+=======
 **Пример использования:**
+>>>>>>> .r37
 
+<<<<<<< .mine
+####rollBack
+`public function rollBack ()`   
+#####Откатывает транзакцию  
+=======
     $dbconnect->query("SELECT table\_name FROM information\_schema.tables WHERE table\_schema = 'public'");
+>>>>>>> .r37
 
+<<<<<<< .mine
+####getTables
+`public function getTables ($query)`   
+#####Возвращает имена таблиц, использующихся в запросе  
+**Параметры:**    
+* *$query* - текст запроса.
+=======
 <br>
 #####beginTransaction
+>>>>>>> .r37
 
+<<<<<<< .mine
+####getEditTables
+`public function getEditTables ($query)`   
+#####Если запрос является запросом на изменение, то возвращает учавствующие в запросе таблицы, иначе возвратит FALSE 
+**Параметры:**    
+* *$query* - текст запроса.
+=======
     public function beginTransaction ()
+>>>>>>> .r37
 
 **Описание:**
 
