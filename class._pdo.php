@@ -6,17 +6,16 @@
  * Time: 10:45
  */
 
+require_once('config.php');
+require_once(DB_ERRORS_LANG . '.errors.php');
+
 class _PDOException extends Exception { }
 
-/**
- * Class _PDO
- */
 class _PDO
 {
     private $dbh = false;
     private $dbdriver = false;
     private $tables = false;
-
     private static $dsn = false;
     private static $instance = false;
 
@@ -67,7 +66,7 @@ class _PDO
             }
             else
             {
-                throw new _PDOException("Не найдены подходящие расширения для работы с $dbdriver");
+                throw new _PDOException(DB_NO_DBDRIVERS . $dbdriver);
             }
 
             if ($dbh)
@@ -76,7 +75,7 @@ class _PDO
             }
             else
             {
-                throw new _PDOException('Не удалось подключение к базе данных');
+                throw new _PDOException(DB_CONNECT_ERROR);
             }
         }
         return self::$instance;
@@ -113,7 +112,7 @@ class _PDO
             }
             else
             {
-                throw new _PDOException('Список таблиц пуст');
+                throw new _PDOException(DB_NO_TABLES);
             }
         }
         else
@@ -372,13 +371,13 @@ class _PDO
 
             if (!$result)
             {
-                throw new _PDOException('Не удалось отправить пакет запросов на выполнение');
+                throw new _PDOException(DB_BATCH_SEND_ERROR);
             }
             return true;
         }
         else
         {
-            throw new _PDOException('Не удалось создать pg_-подключение');
+            throw new _PDOException(DB_NATIVE_CONNECT_ERROR);
         }
     }
 
@@ -400,7 +399,7 @@ class _PDO
         catch (PDOException $e)
         {
             $this->dbh->exec('ROLLBACK');
-            throw new _PDOException('Пакет запросов выполнен с ошибкой: ' . $e->getMessage());
+            throw new _PDOException(DB_BATCH_ERROR . $e->getMessage());
         }
         finally
         {

@@ -15,3 +15,4 @@ const DB_PORT = 6432;
 const DB_EMULATE_PREPARES = false;
 const DB_MAX_PARALLEL_CONNECTS = 8;
 const DB_PERSISTENT = true;
+const DB_ERRORS_LANG = 'ru';
