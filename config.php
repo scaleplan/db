@@ -1,7 +1,7 @@
 <?php
 /**
  * Created by PhpStorm.
- * User: Александр
+ * User: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
  * Date: 12.10.2015
  * Time: 12:04
  */
@@ -16,3 +16,4 @@ const DB_EMULATE_PREPARES = false;
 const DB_MAX_PARALLEL_CONNECTS = 8;
 const DB_PERSISTENT = true;
 const DB_ERRORS_LANG = 'ru';
+const DB_SCHEMAS = "'public'";

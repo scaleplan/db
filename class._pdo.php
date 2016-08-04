@@ -6,7 +6,6 @@
  * Time: 10:45
  */
 
-require_once('config.php');
 require_once(DB_ERRORS_LANG . '.errors.php');
 
 class _PDOException extends Exception { }
@@ -16,6 +15,7 @@ class _PDO
     private $dbh = false;
     private $dbdriver = false;
     private $tables = false;
+
     private static $dsn = false;
     private static $instance = false;
 
@@ -32,7 +32,7 @@ class _PDO
      * @return _PDO
      * @throws Exception
      */
-    public static function create ($dbdriver = DB_DRIVER, $login = DB_LOGIN, $password = DB_PASSWORD, $dbname = DB_NAME, $hostorsock = DB_SOCKET, $port = DB_PORT)
+    public static function create (string $dbdriver = DB_DRIVER, string $login = DB_LOGIN, string $password = DB_PASSWORD, string $dbname = DB_NAME, string $hostorsock = DB_SOCKET, int $port = DB_PORT)
     {
         if (!self::$instance)
         {
@@ -90,25 +90,37 @@ class _PDO
      *
      * @throws _PDOException
      */
-    private function __construct ($dbh, $dbdriver, $dbname)
+    private function __construct (PDO & $dbh, string & $dbdriver, string & $dbname)
     {
         $this->dbh = $dbh;
         $this->dbdriver = $dbdriver;
-        //$this->dbh->setAttribute(PDO::ATTR_PERSISTENT , true);
-        //$this->dbh->setAttribute(PDO::ATTR_STRINGIFY_FETCHES , true);
         if (!isset($_SESSION['tables']))
         {
             if ($dbdriver == 'pgsql')
             {
-                $this->tables = $this->query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'");
+                $this->tables = $this->query("SELECT 
+                                               (CASE 
+                                                  WHEN 
+                                                    table_schema = 'public' 
+                                                  THEN 
+                                                    '' 
+                                                  ELSE 
+                                                    table_schema || '.' 
+                                                END) || table_name AS table_name 
+                                              FROM 
+                                                information_schema.tables 
+                                              WHERE 
+                                                table_schema IN (" . DB_SCHEMAS . ")");
+                $this->tables[]['table_name'] = 'pg_type';
+                $this->tables[]['table_name'] = 'pg_enum';
             }
             else
             {
-                $this->tables = $this->query("SELECT table_name FROM information_schema.tables WHERE table_schema = '$dbname'");
+                $this->tables = $this->query(" show tables from $dbname");
             }
             if ($this->tables)
             {
-                $_SESSION['tables'] = json_encode($this->tables, JSON_UNESCAPED_UNICODE);
+                $_SESSION['tables'] = $this->tables;
             }
             else
             {
@@ -117,7 +129,7 @@ class _PDO
         }
         else
         {
-            $this->tables = json_decode($_SESSION['tables'], true);
+            $this->tables = $_SESSION['tables'];
         }
     }
 
@@ -153,7 +165,7 @@ class _PDO
      */
     public function query($query, array $params = [])
     {
-        $execQuery = function() use (&$params, &$query, &$row_count)
+        $execQuery = function(array & $params, string & $query, int & $row_count)
         {
             if ($params)
             {
@@ -171,30 +183,24 @@ class _PDO
             }
             else
             {
-                return false;
+                throw new _PDOException('Не удалось выполнить запрос');
             }
         };
         $row_count = 0;
         if (is_array($query) && isset($params[0]) && count($query) == count($params))
         {
             $this->dbh->beginTransaction();
-            foreach ($query AS $key => $value)
+            foreach ($query as $key => & $value)
             {
-                $sth = $execQuery();
-                if ($sth)
-                {
-                    $row_count += $sth->rowCount();
-                }
+                $execQuery($params[$key], $value, $row_count);
             }
+            unset($value);
             $this->dbh->commit();
+            return $row_count;
         }
         else
         {
-            $sth = $execQuery();
-        }
-
-        if ($sth)
-        {
+            $sth = $execQuery($params, $query, $row_count);
             $result = $sth->fetchAll();
             if (count($result) == 0)
             {
@@ -205,10 +211,6 @@ class _PDO
                 return $result;
             }
         }
-        else
-        {
-            return false;
-        }
     }
 
     /**
@@ -218,7 +220,7 @@ class _PDO
     {
         try
         {
-            $this->dbh->beginTransaction();
+            return $this->dbh->beginTransaction();
         }
         catch (PDOException $e)
         {
@@ -233,7 +235,7 @@ class _PDO
     {
         try
         {
-            $this->dbh->commit();
+            return $this->dbh->commit();
         }
         catch (PDOException $e)
         {
@@ -248,7 +250,7 @@ class _PDO
     {
         try
         {
-            $this->dbh->rollBack();
+            return $this->dbh->rollBack();
         }
         catch (PDOException $e)
         {
@@ -264,14 +266,17 @@ class _PDO
      * @return array|string
      * @throws _PDOException
      */
-    private function getTables ($query)
+    public function getTables (string & $query)
     {
         $tables = false;
-        foreach ($this->tables AS $table)
+        foreach ($this->tables as & $table)
         {
             if (strpos($query, $table['table_name']) !== false)
+            {
                 $tables[] = $table['table_name'];
+            }
         }
+        unset($table);
         return $tables;
     }
 
@@ -282,7 +287,7 @@ class _PDO
      *
      * @return array|bool|string
      */
-    public function getEditTables ($query)
+    public function getEditTables (string & $query)
     {
         if (preg_match('/(UPDATE|INSERT\sINTO|DELETE)/', $query))
         {
@@ -295,7 +300,7 @@ class _PDO
     }
 
     /**
-     * Выполнить параллельно пакет транзикций
+     * Выполнить параллельно пакет транзикций. Актуально для PostgreSQL
      *
      * @param array $batch - массив транзакций
      *
@@ -309,10 +314,11 @@ class _PDO
             $this->dbh->exec($sql);
         }
         $query = 'SELECT execute_multiple(ARRAY[';
-        foreach ($batch AS $t)
+        foreach ($batch as & $t)
         {
             $query .= "'" . implode(';', $t) . "',";
         }
+        unset($t);
         $query = trim($query, ',');
         $count = count($batch);
 
@@ -322,13 +328,14 @@ class _PDO
         $result = $this->query($query);
 
         $failed = explode(',', $result[0]['failed']);
-        foreach ($batch AS $key => $value)
+        foreach ($batch as $key => & $value)
         {
             if (!in_array($key + 1, $failed))
             {
                 unset($batch[$key]);
             }
         }
+        unset($value);
 
         return $batch;
     }
@@ -339,23 +346,24 @@ class _PDO
      * @param array $batch
      * @return string
      */
-    private function createQStrFromBatch (array $batch)
+    private function createQStrFromBatch (array & $batch)
     {
         $query_str = '';
-        foreach ($batch AS $t)
+        foreach ($batch as & $t)
         {
             if (count($t) > 1)
             {
                 $query_str .= 'BEGIN;' . implode(';', $t) . ';' . 'COMMIT;';
             }
         }
+        unset($t);
         return $query_str;
     }
 
     /**
      * Отправить асинхронно пакет транзакций на сервер
      *
-     * @param array $batch - массив транзакций
+     * @param array $batch - массив транзакций. Актуально для PostgreSQL
      *
      * @return bool
      * @throws _PDOException
@@ -382,7 +390,7 @@ class _PDO
     }
 
     /**
-     * Выполнить пакет транзакций с проверкой результата выполнения
+     * Выполнить пакет транзакций с проверкой результата выполнения. Актуально для PostgreSQL
      *
      * @param array $batch - массив транзакций
      *
