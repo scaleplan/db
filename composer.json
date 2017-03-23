@@ -5,7 +5,7 @@
     "minimum-stability": "master",
     "config": {
 	"process-timeout": 1800
-    }
+    },
     "require": {
         "php": ">=7.0.0"
     }
