@@ -1,7 +1,12 @@
 {
+    "name": "avtomon/_PDO",
+    "description": "Yet another PHP PDO wrapper",
     "type": "project",
     "minimum-stability": "master",
     "config": {
 	"process-timeout": 1800
+    }
+    "require": {
+        "php": ">=7.0.0"
     }
 }
