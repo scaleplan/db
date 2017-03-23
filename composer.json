@@ -1,5 +1,7 @@
-"type": "project",
-"minimum-stability": "master",
-"config": {
+{
+    "type": "project",
+    "minimum-stability": "master",
+    "config": {
 	"process-timeout": 1800
+    }
 }
