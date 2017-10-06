@@ -23,11 +23,11 @@ class _PDO
      *
      * @throws _PDOException
      */
-    private function __construct(
+    public function __construct(
             string $dns,
             string $login,
             string $password,
-            array $schemas = ['public'],
+            array $schemas = [],
             array $options = []
     ) {
         if (!preg_match('/^(.+?):/i', $dns, $matches)) {
