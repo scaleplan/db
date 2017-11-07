@@ -5,5 +5,10 @@
     "minimum-stability": "dev",
     "config": {
 	"process-timeout": 1800
-    }
+    },
+    "autoload": {
+        "psr-4": {
+            "_PDO\\": "/"
+        }
+    },
 }
