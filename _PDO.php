@@ -1,6 +1,8 @@
 <?php
 
-class _PDOException extends Exception
+namespace _PDO;
+
+class _PDOException extends \Exception
 {
 }
 
@@ -36,7 +38,7 @@ class _PDO
 
         $this->dbdriver = $matches[1];
 
-        $this->dbh = new PDO($dns, $login, $password, $options);
+        $this->dbh = new \PDO($dns, $login, $password, $options);
 
         $this->dns = $dns;
 
@@ -140,7 +142,7 @@ class _PDO
     {
         try {
             return $this->dbh->beginTransaction();
-        } catch (PDOException $e) {
+        } catch (\PDOException $e) {
 
         }
     }
@@ -152,7 +154,7 @@ class _PDO
     {
         try {
             return $this->dbh->commit();
-        } catch (PDOException $e) {
+        } catch (\PDOException $e) {
 
         }
     }
@@ -164,7 +166,7 @@ class _PDO
     {
         try {
             return $this->dbh->rollBack();
-        } catch (PDOException $e) {
+        } catch (\PDOException $e) {
 
         }
     }
