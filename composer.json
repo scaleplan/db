@@ -8,7 +8,7 @@
     },
     "autoload": {
         "psr-4": {
-            "_PDO\\": "src/"
+            "avtomon\\_PDO\\": "src/"
         }
     }
 }
