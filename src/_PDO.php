@@ -1,6 +1,6 @@
 <?php
 
-namespace avtomon\_PDO;
+namespace avtomon;
 
 class _PDOException extends \Exception
 {
