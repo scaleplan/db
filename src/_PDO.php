@@ -55,7 +55,7 @@ class _PDO
                                               FROM 
                                                 information_schema.tables 
                                               WHERE 
-                                                table_schema IN (" . implode(', ', $schemas) . ")");
+                                                table_schema IN ('" . implode("', '", $schemas) . "')");
             $this->tables[]['table_name'] = 'pg_type';
             $this->tables[]['table_name'] = 'pg_enum';
         } else {

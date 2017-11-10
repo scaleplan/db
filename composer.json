@@ -1,14 +1,14 @@
 {
-    "name": "avtomon/_PDO",
-    "description": "Yet another PHP PDO wrapper",
-    "type": "project",
-    "minimum-stability": "dev",
-    "config": {
-	"process-timeout": 1800
-    },
-    "autoload": {
-        "psr-4": {
-            "avtomon\\": "src/"
-        }
+  "name": "avtomon/_PDO",
+  "description": "Yet another PHP PDO wrapper",
+  "type": "project",
+  "minimum-stability": "dev",
+  "config": {
+    "process-timeout": 1800
+  },
+  "autoload": {
+    "psr-4": {
+      "avtomon\\": "src/"
     }
+  }
 }
