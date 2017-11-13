@@ -77,7 +77,7 @@ class _PDO
      * @param $query - запрос
      * @param array $params - параметры запроса
      *
-     * @return int
+     * @return int|array
      * @throws _PDOException
      */
     public function query($query, array $params = [])
@@ -192,17 +192,18 @@ class _PDO
      *
      * @param bool $query - запрос
      *
-     * @return array|string
+     * @return array
      * @throws _PDOException
      */
     public function getTables(string & $query)
     {
-        $tables = false;
+        $tables = [];
         foreach ($this->tables as & $table) {
             if (strpos($query, $table['table_name']) !== false) {
                 $tables[] = $table['table_name'];
             }
         }
+
         unset($table);
         return $tables;
     }
