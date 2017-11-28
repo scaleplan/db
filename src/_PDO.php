@@ -31,12 +31,7 @@ class _PDO
             string $login,
             string $password,
             array $schemas = [],
-            array $options = [
-                \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
-                \PDO::ATTR_ORACLE_NULLS       => \PDO::NULL_TO_STRING,
-                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
-                \PDO::ATTR_EMULATE_PREPARES   => true
-            ]
+            array $options = []
     ) {
         if (!preg_match('/^(.+?):/i', $dns, $matches)) {
             throw new _PDOException('Неверная строка подключения: Не задан драйвер');
@@ -44,9 +39,14 @@ class _PDO
 
         $this->dbdriver = $matches[1];
 
-        if (!($this->dbh = new \PDO($dns, $login, $password, $options))) {
+        if (empty($this->dbh = new \PDO($dns, $login, $password, $options))) {
             throw new _PDOException('Не удалось создать объект PDO');
         }
+
+        $this->dbh->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        $this->dbh->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_TO_STRING);
+        $this->dbh->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+        $this->dbh->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
 
         $this->dns = $dns;
 
@@ -155,7 +155,7 @@ class _PDO
         try {
             return $this->dbh->beginTransaction();
         } catch (\PDOException $e) {
-
+            return false;
         }
     }
 
@@ -169,7 +169,7 @@ class _PDO
         try {
             return $this->dbh->commit();
         } catch (\PDOException $e) {
-
+            return true;
         }
     }
 
@@ -183,7 +183,7 @@ class _PDO
         try {
             return $this->dbh->rollBack();
         } catch (\PDOException $e) {
-
+            return true;
         }
     }
 
