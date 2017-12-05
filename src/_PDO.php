@@ -92,18 +92,19 @@ class _PDO
     public function query($query, array $params = [])
     {
         $execQuery = function (array &$params, string &$query, int &$rowСount) {
-            if ($params) {
-                $sth = $this->dbh->prepare($query);
-                $sth->execute($params);
-            } else {
+            if (empty($params)) {
                 $sth = $this->dbh->query($query);
             }
-            if ($sth) {
-                $rowСount += $sth->rowCount();
-                return $sth;
-            } else {
+
+            $sth = $this->dbh->prepare($query);
+            $sth->execute($params);
+
+            if (!$sth) {
                 throw new _PDOException('Не удалось выполнить запрос');
             }
+
+            $rowСount += $sth->rowCount();
+            return $sth;
         };
 
         $rowСount = 0;
@@ -112,25 +113,26 @@ class _PDO
             foreach ($query as $key => & $value) {
                 $execQuery($params[$key], $value, $rowСount);
             }
+
             unset($value);
             return $rowСount;
-        } else {
-            $sth = $execQuery($params, $query, $rowСount);
-            $result = $sth->fetchAll();
-            if (count($result) == 0) {
-                return $rowСount;
-            } else {
-                return $result;
-            }
         }
+
+        $sth = $execQuery($params, $query, $rowСount);
+        $result = $sth->fetchAll();
+        if (count($result) == 0) {
+            return $rowСount;
+        }
+
+        return $result;
     }
 
     /**
      * Получить имя драйвера СУБД
      *
-     * @return bool
+     * @return string
      */
-    public function getDBDriver()
+    public function getDBDriver(): string
     {
         return $this->dbdriver;
     }
@@ -169,7 +171,7 @@ class _PDO
         try {
             return $this->dbh->commit();
         } catch (\PDOException $e) {
-            return true;
+            return false;
         }
     }
 
@@ -183,7 +185,7 @@ class _PDO
         try {
             return $this->dbh->rollBack();
         } catch (\PDOException $e) {
-            return true;
+            return false;
         }
     }
 
@@ -198,9 +200,9 @@ class _PDO
     {
         if (preg_match('/(UPDATE|INSERT\sINTO|DELETE|CREATE\sTYPE)/', $query)) {
             return $this->getTables($query);
-        } else {
-            return [];
         }
+
+        return [];
     }
 
     /**
