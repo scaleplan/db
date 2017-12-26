@@ -46,7 +46,6 @@ class _PDO
         $this->dbh->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         $this->dbh->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_TO_STRING);
         $this->dbh->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-        $this->dbh->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
 
         $this->dns = $dns;
 
