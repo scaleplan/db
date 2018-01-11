@@ -2,7 +2,7 @@
 
 namespace avtomon;
 
-class _PDOException extends \Exception
+class _PDOException extends \PDOException
 {
 }
 
@@ -93,10 +93,10 @@ class _PDO
         $execQuery = function (array &$params, string &$query, int &$rowСount) {
             if (empty($params)) {
                 $sth = $this->dbh->query($query);
+            } else {
+                $sth = $this->dbh->prepare($query);
+                $sth->execute($params);
             }
-
-            $sth = $this->dbh->prepare($query);
-            $sth->execute($params);
 
             if (!$sth) {
                 throw new _PDOException('Не удалось выполнить запрос');
