@@ -8,15 +8,41 @@ class _PDOException extends \PDOException
 
 class _PDO
 {
+    /**
+     * Путь к файлу с хранимой процедурой, обеспечивающей параллельное выполнение запросов
+     */
     const EXECUTE_MULTIPLE_PATH = '';
 
-    private $dns = ''; // Строка подключения к БД
-    private $dbh = null; // Хэндлер подключения к БД
-    private $dbdriver = ''; // Имя драйвера СУБД
-    private $tables = []; // Список таблиц БД
+    /**
+     * Строка подключения к БД
+     *
+     * @var string
+     */
+    private $dns = '';
 
     /**
-     * _PDO constructor.
+     * Хэндлер подключения к БД
+     *
+     * @var null|\PDO
+     */
+    private $dbh = null;
+
+    /**
+     * Имя драйвера СУБД
+     *
+     * @var string
+     */
+    private $dbdriver = '';
+
+    /**
+     * Список таблиц БД
+     *
+     * @var array|int
+     */
+    private $tables = [];
+
+    /**
+     * _PDO constructor
      *
      * @param string $dns - строка подключения
      * @param string $login - пользователь БД
@@ -227,7 +253,7 @@ class _PDO
     }
 
     /**
-     * Выполнить параллельно пакет транзикций. Актуально для PostgreSQL
+     * Выполнить параллельно пакет запросов. Актуально для PostgreSQL
      *
      * @param array $batch - массив транзакций
      *
