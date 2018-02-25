@@ -299,30 +299,59 @@ class _PDO
     }
 
     /**
-     * Отправить асинхронно пакет транзакций на сервер
+     * Отправить асинхронно пакет транзакций на сервер (актуально для PostgreSQL)
      *
-     * @param array $batch - массив транзакций. Актуально для PostgreSQL
+     * @param $query - запрос или массив запросов
+     * @param $data - параметры подготовленного запроса
      *
      * @return bool
      *
      * @throws _PDOException
      */
-    public function asyncBatch(array $batch): bool
+    public function async($query, array $data = null): bool
     {
         if ($this->dbdriver != 'pgsql') {
             throw new _PDOException('Поддерживается только PostgreSQL');
+        }
+
+        if (!extension_loaded('pgsql')) {
+            throw new _PDOException('Для асинхронного выполнения запросов требуется расширение pgsql');
         }
 
         if (!$db = pg_connect($this->dns)) {
             throw new _PDOException('Не удалось подключиться к БД через нативный драйвер');
         }
 
-        $result = pg_send_query($db, $this->createQStrFromBatch($batch));
-        if (!$result) {
-            throw new _PDOException('Не удалось выполнить пакет транзакций');
+        if (!is_array($query) && !is_string($query)) {
+            throw new _PDOException('Первый параметр должен быть строкой запроса или массивом запросов');
         }
 
-        pg_close($db);
+        if (!$data) {
+            $queryStr = $query;
+            if (is_array($query)) {
+                $queryStr = $this->createQStrFromBatch($db);
+            }
+            $result = pg_send_query($db, $queryStr);
+            if (!$result) {
+                if (is_array($query)) {
+                    throw new _PDOException('Не удалось выполнить пакет запросов');
+                }
+
+                throw new _PDOException('Не удалось выполнить запрос');
+            }
+
+            pg_close($db);
+
+            return true;
+        }
+
+        if (is_array($query)) {
+            throw new _PDOException('Для асинхронного выполнения подготовленных запросов недоступно использование пакета запросов');
+        }
+
+        if (!pg_send_query_params($db, $query, $data)) {
+            throw new _PDOException(pg_last_error($db));
+        }
 
         return true;
     }
