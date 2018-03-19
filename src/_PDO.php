@@ -42,6 +42,13 @@ class _PDO
     private $tables = [];
 
     /**
+     * Возвращать ли пустой массив при отсутствии результата запроса
+     *
+     * @var bool
+     */
+    private $isArrayResults = true;
+
+    /**
      * _PDO constructor
      *
      * @param string $dns - строка подключения
@@ -57,7 +64,8 @@ class _PDO
             string $login,
             string $password,
             array $schemas = [],
-            array $options = []
+            array $options = [],
+            bool $isArrayResults = true
     ) {
         if (!preg_match('/^(.+?):/i', $dns, $matches)) {
             throw new _PDOException('Неверная строка подключения: Не задан драйвер');
@@ -102,6 +110,8 @@ class _PDO
         if (!$this->tables) {
             throw new _PDOException('Не удалось получить список таблиц');
         }
+
+        $this->isArrayResults = $isArrayResults;
     }
 
     /**
@@ -145,7 +155,7 @@ class _PDO
 
         $sth = $execQuery($params, $query, $rowСount);
         $result = $sth->fetchAll();
-        if (count($result) == 0) {
+        if (count($result) == 0 && !$this->isArrayResults) {
             return $rowСount;
         }
 
@@ -223,7 +233,7 @@ class _PDO
      */
     public function getEditTables(string &$query): array
     {
-        if (preg_match('/(UPDATE|INSERT\sINTO|DELETE|CREATE\sTYPE)/', $query)) {
+        if (preg_match('/(UPDATE\s|INSERT\sINTO\s|DELETE\s|CREATE\sTYPE)/', $query)) {
             return $this->getTables($query);
         }
 
