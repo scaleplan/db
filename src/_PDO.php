@@ -18,35 +18,35 @@ class _PDO
      *
      * @var string
      */
-    private $dns = '';
+    protected $dns = '';
 
     /**
      * Хэндлер подключения к БД
      *
      * @var null|\PDO
      */
-    private $dbh = null;
+    protected $dbh = null;
 
     /**
      * Имя драйвера СУБД
      *
      * @var string
      */
-    private $dbdriver = '';
+    protected $dbdriver = '';
 
     /**
      * Список таблиц БД
      *
      * @var array|int
      */
-    private $tables = [];
+    protected $tables = [];
 
     /**
      * Возвращать ли пустой массив при отсутствии результата запроса
      *
      * @var bool
      */
-    private $isArrayResults = true;
+    protected $isArrayResults = true;
 
     /**
      * _PDO constructor
@@ -373,7 +373,7 @@ class _PDO
      *
      * @return string
      */
-    private function createQStrFromBatch(array & $batch): string
+    protected function createQStrFromBatch(array & $batch): string
     {
         $queryStr = '';
         foreach ($batch as & $t) {
