@@ -159,6 +159,12 @@ class _PDO
             return $rowСount;
         }
 
+        $result = array_map(function ($record) {
+             return array_map(function ($item) {
+                    return json_decode($item, true) ?? $item;
+                }, $record);
+             }, $result);
+
         return $result;
     }
 
