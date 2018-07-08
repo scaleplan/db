@@ -1,6 +1,6 @@
 <?php
 
-require $_SERVER['DOCUMENT_ROOT'] . '/vendor/autoload.php';
+require dirname(__DIR__, 3) . '/vendor/autoload.php';
 //require __DIR__ . '/vendor/avtomon/sami-markdown/src/SamiTwigExtension.php';
 
 use Sami\{
