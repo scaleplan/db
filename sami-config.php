@@ -14,7 +14,7 @@ $sami = new Sami(__DIR__ . '/src', array(
     'title'                => '_PDO API',
     'build_dir'            => __DIR__.'/docs',
     'cache_dir'            => __DIR__.'/cache',
-    'template_dirs'        => array(__DIR__.'/vendor/avtomon/sami-github'),
+    'template_dirs'        => [dirname(__DIR__, 3) . '/vendor/avtomon/sami-github'],
     //'template_dirs'        => array(__DIR__.'/vendor/avtomon/sami-markdown/src'),
 ));
 // document all methods and properties
