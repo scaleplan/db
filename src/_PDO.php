@@ -2,16 +2,37 @@
 
 namespace avtomon;
 
+/**
+ * Класс исключений
+ *
+ * Class _PDOException
+ * @package avtomon
+ */
 class _PDOException extends \PDOException
 {
 }
 
+/**
+ * Обертка для PDO
+ *
+ * Class _PDO
+ * @package avtomon
+ */
 class _PDO
 {
     /**
-     * Путь к файлу с хранимой процедурой, обеспечивающей параллельное выполнение запросов
+     * Максимальное число параллельных транзакций
+     *
+     * @const int
      */
-    const EXECUTE_MULTIPLE_PATH = '';
+    protected const DB_MAX_PARALLEL_CONNECTS = 10;
+
+    /**
+     * Путь к файлу с хранимой процедурой, обеспечивающей параллельное выполнение запросов
+     *
+     * @const string
+     */
+    protected const EXECUTE_MULTIPLE_PATH = '';
 
     /**
      * Строка подключения к БД
@@ -25,7 +46,7 @@ class _PDO
      *
      * @var null|\PDO
      */
-    protected $dbh = null;
+    protected $dbh;
 
     /**
      * Имя драйвера СУБД
@@ -54,24 +75,30 @@ class _PDO
      * @param string $dns - строка подключения
      * @param string $login - пользователь БД
      * @param string $password - пароль
-     * @param array $schemas - какие схемы будут использоваться
+     * @param string[] $schemas - какие схемы будут использоваться
      * @param array $options - дополнительные опции
-     *
-     * @throws _PDOException
+     * @param bool $isArrayResults - возвращать результат только в виде массива
      */
     public function __construct(
-            string $dns,
-            string $login,
-            string $password,
-            array $schemas = [],
-            array $options = [],
-            bool $isArrayResults = true
-    ) {
+        string $dns,
+        string $login,
+        string $password,
+        array $schemas = [],
+        array $options = [],
+        bool $isArrayResults = true
+    )
+    {
         if (!preg_match('/^(.+?):/i', $dns, $matches)) {
             throw new _PDOException('Неверная строка подключения: Не задан драйвер');
         }
 
         $this->dbdriver = $matches[1];
+
+        if (!preg_match('/dbname=(.+)/i', $dns, $matches)) {
+            throw new _PDOException('Не удалось выделить имя базы данных из строки подключения');
+        }
+
+        $dbName = $matches[1];
 
         if (empty($this->dbh = new \PDO($dns, $login, $password, $options))) {
             throw new _PDOException('Не удалось создать объект PDO');
@@ -83,8 +110,23 @@ class _PDO
 
         $this->dns = $dns;
 
+        $this->isArrayResults = $isArrayResults;
+
+        if (!empty($_SESSION['databases'][$dbName]['tables'])) {
+            $this->tables = $_SESSION['databases'][$dbName]['tables'];
+            return;
+        }
+
+        if (!isset($_SESSION['databases']) || !\is_array($_SESSION['databases'])) {
+            $_SESSION['databases'] = [];
+        }
+
+        $_SESSION['databases'][$dbName] = ['tables' => []];
+
         if ($this->dbdriver === 'pgsql') {
-            $this->tables = $this->query("SELECT 
+            self::initSessionStorage($dbName);
+            $this->tables = $_SESSION['databases'][$dbName]['tables'] = $this->query(
+                                      "SELECT 
                                                (CASE 
                                                   WHEN 
                                                     table_schema = 'public' 
@@ -104,20 +146,34 @@ class _PDO
                 throw new _PDOException('Не удалось выделить имя базы данных из строки подключения');
             }
 
-            $this->tables = $this->query("SHOW TABLES FROM {$matches[1]}");
+            $this->tables = $_SESSION['databases'][$dbName]['tables'] = $this->query("SHOW TABLES FROM {$matches[1]}");
         }
 
         if (!$this->tables) {
             throw new _PDOException('Не удалось получить список таблиц');
         }
+    }
 
-        $this->isArrayResults = $isArrayResults;
+    /**
+     * Инициализировать хранение имен таблиц в сессии
+     *
+     * @param string $dbName - имя базы данных
+     */
+    protected static function initSessionStorage(string $dbName): void
+    {
+        if (!isset($_SESSION['databases'])) {
+            $_SESSION['databases'] = [];
+        }
+
+        if (!isset($_SESSION['databases'][$dbName])) {
+            $_SESSION['databases'][$dbName] = [];
+        }
     }
 
     /**
      * Сделать запрос к БД, поддерживает подготовленные выражения
      *
-     * @param $query - запрос
+     * @param string[]|string $query - запрос
      * @param array $params - параметры запроса
      *
      * @return int|array
@@ -126,7 +182,7 @@ class _PDO
      */
     public function query($query, array $params = [])
     {
-        $execQuery = function (array &$params, string &$query, int &$rowСount) {
+        $execQuery = function (array &$params, string &$query, int &$rowCount) {
             if (empty($params)) {
                 $sth = $this->dbh->query($query);
             } else {
@@ -138,32 +194,32 @@ class _PDO
                 throw new _PDOException('Не удалось выполнить запрос');
             }
 
-            $rowСount += $sth->rowCount();
+            $rowCount += $sth->rowCount();
             return $sth;
         };
 
-        $rowСount = 0;
-        if (is_array($query) && isset($params[0]) && count($query) == count($params)) {
+        $rowCount = 0;
+        if (\is_array($query) && isset($params[0]) && \count($query) === \count($params)) {
             $this->dbh->beginTransaction();
             foreach ($query as $key => & $value) {
-                $execQuery($params[$key], $value, $rowСount);
+                $execQuery($params[$key], $value, $rowCount);
             }
 
             unset($value);
-            return $rowСount;
+            return $rowCount;
         }
 
-        $sth = $execQuery($params, $query, $rowСount);
+        $sth = $execQuery($params, $query, $rowCount);
         $result = $sth->fetchAll();
-        if (count($result) == 0 && !$this->isArrayResults) {
-            return $rowСount;
+        if (!$result && !$this->isArrayResults) {
+            return $rowCount;
         }
 
         $result = array_map(function ($record) {
-             return array_map(function ($item) {
-                    return json_decode($item, true) ?? $item;
-                }, $record);
-             }, $result);
+            return array_map(function ($item) {
+                return json_decode($item, true) ?? $item;
+            }, $record);
+        }, $result);
 
         return $result;
     }
@@ -233,7 +289,7 @@ class _PDO
     /**
      * Возвращаем имена таблиц использующихся в запросе только для запросов на изменение
      *
-     * @param $query - запрос
+     * @param string $query - запрос
      *
      * @return array
      */
@@ -249,13 +305,13 @@ class _PDO
     /**
      * Возвращаем имена таблиц использующихся в запросе
      *
-     * @param bool $query - запрос
+     * @param string $query - запрос
      *
      * @return array
      *
      * @throws _PDOException
      */
-    public function getTables(string & $query)
+    public function getTables(string &$query): array
     {
         $tables = [];
         foreach ($this->tables as & $table) {
@@ -271,7 +327,7 @@ class _PDO
     /**
      * Выполнить параллельно пакет запросов. Актуально для PostgreSQL
      *
-     * @param array $batch - массив транзакций
+     * @param string[] $batch - массив транзакций
      *
      * @return array
      *
@@ -279,11 +335,11 @@ class _PDO
      */
     public function parallelExecute(array $batch): array
     {
-        if ($this->dbdriver != 'pgsql') {
+        if ($this->dbdriver !== 'pgsql') {
             throw new _PDOException('Поддерживается только PostgreSQL');
         }
 
-        if (!count($this->query("SELECT proname FROM pg_proc WHERE proname = 'execute_multiple'"))) {
+        if (!\count($this->query("SELECT proname FROM pg_proc WHERE proname = 'execute_multiple'"))) {
             $sql = file_get_contents(self::EXECUTE_MULTIPLE_PATH);
             $this->dbh->exec($sql);
         }
@@ -295,16 +351,16 @@ class _PDO
 
         unset($t);
         $query = trim($query, ',');
-        $count = count($batch);
+        $count = \count($batch);
 
-        $count = DB_MAX_PARALLEL_CONNECTS <= $count ? DB_MAX_PARALLEL_CONNECTS : $count;
-        $query .= "], $count, '" . self::$dsn . "') AS failed";
+        $count = self::DB_MAX_PARALLEL_CONNECTS <= $count ? self::DB_MAX_PARALLEL_CONNECTS : $count;
+        $query .= "], $count, '" . $this->dns . "') AS failed";
 
         $result = $this->query($query);
 
         $failed = explode(',', $result[0]['failed']);
-        foreach ($batch as $key => & $value) {
-            if (!in_array($key + 1, $failed)) {
+        foreach ($batch as $key => &$value) {
+            if (!\in_array($key + 1, $failed, true)) {
                 unset($batch[$key]);
             }
         }
@@ -317,8 +373,8 @@ class _PDO
     /**
      * Отправить асинхронно пакет транзакций на сервер (актуально для PostgreSQL)
      *
-     * @param $query - запрос или массив запросов
-     * @param $data - параметры подготовленного запроса
+     * @param string[]|string $query - запрос или массив запросов
+     * @param array $data - параметры подготовленного запроса
      *
      * @return bool
      *
@@ -326,11 +382,11 @@ class _PDO
      */
     public function async($query, array $data = null): bool
     {
-        if ($this->dbdriver != 'pgsql') {
+        if ($this->dbdriver !== 'pgsql') {
             throw new _PDOException('Поддерживается только PostgreSQL');
         }
 
-        if (!extension_loaded('pgsql')) {
+        if (!\extension_loaded('pgsql')) {
             throw new _PDOException('Для асинхронного выполнения запросов требуется расширение pgsql');
         }
 
@@ -338,18 +394,18 @@ class _PDO
             throw new _PDOException('Не удалось подключиться к БД через нативный драйвер');
         }
 
-        if (!is_array($query) && !is_string($query)) {
+        if (!\is_array($query) && !\is_string($query)) {
             throw new _PDOException('Первый параметр должен быть строкой запроса или массивом запросов');
         }
 
         if (!$data) {
             $queryStr = $query;
-            if (is_array($query)) {
-                $queryStr = $this->createQStrFromBatch($db);
+            if (\is_array($query)) {
+                $queryStr = $this->createQStrFromBatch($query);
             }
             $result = pg_send_query($db, $queryStr);
             if (!$result) {
-                if (is_array($query)) {
+                if (\is_array($query)) {
                     throw new _PDOException('Не удалось выполнить пакет запросов');
                 }
 
@@ -361,7 +417,7 @@ class _PDO
             return true;
         }
 
-        if (is_array($query)) {
+        if (\is_array($query)) {
             throw new _PDOException('Для асинхронного выполнения подготовленных запросов недоступно использование пакета запросов');
         }
 
@@ -375,15 +431,15 @@ class _PDO
     /**
      * Формирует строку для асинхронного выполнения методами asyncBatch и execBatch
      *
-     * @param array $batch - массив транзакций
+     * @param string[] $batch - массив транзакций
      *
      * @return string
      */
-    protected function createQStrFromBatch(array & $batch): string
+    protected function createQStrFromBatch(array &$batch): string
     {
         $queryStr = '';
         foreach ($batch as & $t) {
-            if (count($t) > 1) {
+            if (\count($t) > 1) {
                 $queryStr .= 'BEGIN;' . implode(';', $t) . ';' . 'COMMIT;';
             }
         }
@@ -395,7 +451,7 @@ class _PDO
     /**
      * Выполнить пакет транзакций с проверкой результата выполнения. Актуально для PostgreSQL
      *
-     * @param array $batch - массив транзакций
+     * @param string[] $batch - массив транзакций
      *
      * @return bool
      *
@@ -403,15 +459,15 @@ class _PDO
      */
     public function execBatch(array $batch): bool
     {
-        $oldAttrEmulatePrepares = $this->dbh->getAttribute(PDO::ATTR_EMULATE_PREPARES);
-        $this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+        $oldAttrEmulatePrepares = $this->dbh->getAttribute(\PDO::ATTR_EMULATE_PREPARES);
+        $this->dbh->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
         try {
             $this->dbh->exec($this->createQStrFromBatch($batch));
-        } catch (PDOException $e) {
+        } catch (_PDOException $e) {
             $this->dbh->exec('ROLLBACK');
             throw new _PDOException('Ошибка выполнения пакета транзакций: ' . $e->getMessage());
         } finally {
-            $this->dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, $oldAttrEmulatePrepares);
+            $this->dbh->setAttribute(\PDO::ATTR_EMULATE_PREPARES, $oldAttrEmulatePrepares);
         }
 
         return true;
