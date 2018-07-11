@@ -20,6 +20,7 @@ Class _PDO
 
 class устанавливает следующие константы:
 
+- [`DUPLICATE_ERROR_CODE`](#DUPLICATE_ERROR_CODE) &mdash; Код указывающий на ошибку произошедшую при попытке добавить дубликат данных
 - [`DB_MAX_PARALLEL_CONNECTS`](#DB_MAX_PARALLEL_CONNECTS) &mdash; Максимальное число параллельных транзакций
 - [`EXECUTE_MULTIPLE_PATH`](#EXECUTE_MULTIPLE_PATH) &mdash; Путь к файлу с хранимой процедурой, обеспечивающей параллельное выполнение запросов
 

@@ -26,6 +26,11 @@ class _PDOException extends \PDOException
 class _PDO
 {
     /**
+     * Код указывающий на ошибку произошедшую при попытке добавить дубликат данных
+     */
+    public const DUPLICATE_ERROR_CODE = '42P04';
+
+    /**
      * Максимальное число параллельных транзакций
      *
      * @const int
