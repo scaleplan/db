@@ -3,12 +3,7 @@
 namespace avtomon;
 
 /**
- * _PDO представляет собой класс-обертку для взаимодествия PHP-приложения с СУБД PostgreSQL и MySQL. 
- * Позволяет прозрачно взаимодействовать с любой из этих СУБД не вникая в различия взаимодейтвия PHP с этими системами – 
- * для разработчика работа с обоими СУБД будет одинакова с точки зрения программирования. 
- * Класс поддерживает подготовленные выражения. Кроме того есть дополнительная функциональность для реализации концепции 
- * параллельного выполнения запросов внутри одного подключени к базе данных. А так же есть методы для реализации 
- * асинхронного выполнения пакетов запросов.
+ * Класс ошибки
  *
  * Class _PDOException
  * @package avtomon
@@ -18,13 +13,33 @@ class _PDOException extends \PDOException
 }
 
 /**
- * Обертка для PDO
+ * _PDO представляет собой класс-обертку для взаимодествия PHP-приложения с СУБД PostgreSQL и MySQL.
+ * Позволяет прозрачно взаимодействовать с любой из этих СУБД не вникая в различия взаимодейтвия PHP с этими системами –
+ * для разработчика работа с обоими СУБД будет одинакова с точки зрения программирования.
+ * Класс поддерживает подготовленные выражения. Кроме того есть дополнительная функциональность для реализации концепции
+ * параллельного выполнения запросов внутри одного подключени к базе данных. А так же есть методы для реализации
+ * асинхронного выполнения пакетов запросов.
  *
  * Class _PDO
  * @package avtomon
  */
 class _PDO
 {
+    /**
+     * Доступные драйвера СУБД
+     */
+    public const ALLOW_DRIVERS = ['pgsql', 'mysql'];
+
+    /**
+     * С какими схемами дополнительно будет рабоать объект при подключении к PosqlgreSQL
+     */
+    public const PGSQL_ADDITIONAL_TABLES = ['pg_type', 'pg_enum'];
+
+    /**
+     * С какими схемами дополнительно будет рабоать объект при подключении к MySQL
+     */
+    public const MYSQL_ADDITIONAL_TABLES = [];
+
     /**
      * Код указывающий на ошибку произошедшую при попытке добавить дубликат данных
      */
@@ -80,7 +95,47 @@ class _PDO
     protected $isArrayResults = true;
 
     /**
-     * _PDO constructor
+     * Сохраненные объекты _PDO
+     *
+     * @var array
+     */
+    public static $instances = [];
+
+    /**
+     * Фабрика _PDO
+     *
+     * @param string $dns - строка подключения
+     * @param string $login - пользователь БД
+     * @param string $password - пароль
+     * @param string[] $schemas - какие схемы будут использоваться
+     * @param array $options - дополнительные опции
+     * @param bool $isArrayResults - возвращать результат только в виде массива
+     */
+    public static function getInstance(
+        string $dns,
+        string $login,
+        string $password,
+        array $schemas = [],
+        array $options = [],
+        bool $isArrayResults = true
+    ) {
+        $key =
+            $dns
+            . $login
+            . $password
+            . json_encode($schemas, JSON_UNESCAPED_UNICODE)
+            . json_encode($options, JSON_UNESCAPED_UNICODE)
+            . (string) $isArrayResults;
+
+        if (empty(self::$instances[$key])) {
+            self::$instances[$key] = new _PDO($dns, $login, $password, $schemas, $options, $isArrayResults);
+        }
+
+        return self::$instances[$key];
+    }
+
+    /**
+     * Конструктор. Намеренно сделан открытым чтобы дать большую гибкость
      *
      * @param string $dns - строка подключения
      * @param string $login - пользователь БД
@@ -100,6 +155,10 @@ class _PDO
     {
         if (!preg_match('/^(.+?):/i', $dns, $matches)) {
             throw new _PDOException('Неверная строка подключения: Не задан драйвер');
+        }
+
+        if (!\in_array($matches[1], self::ALLOW_DRIVERS, true)) {
+            throw new _PDOException("Подключение с использование драйвера {$matches[1]} недоступно");
         }
 
         $this->dbdriver = $matches[1];
@@ -133,9 +192,12 @@ class _PDO
 
         $_SESSION['databases'][$dbName] = ['tables' => []];
 
+        $this->addAdditionTables();
+
         if ($this->dbdriver === 'pgsql') {
             self::initSessionStorage($dbName);
-            $this->tables = $_SESSION['databases'][$dbName]['tables'] = $this->query(
+
+            $_SESSION['databases'][$dbName]['tables'] = $this->tables = array_merge($this->tables, $this->query(
                                       "SELECT 
                                                (CASE 
                                                   WHEN 
@@ -149,8 +211,6 @@ class _PDO
                                                 information_schema.tables 
                                               WHERE 
                                                 table_schema IN ('" . implode("', '", $schemas) . "')");
-            $this->tables[]['table_name'] = 'pg_type';
-            $this->tables[]['table_name'] = 'pg_enum';
         } elseif ($this->dbdriver === 'mysql') {
             if (!preg_match('/dbname=(.+?)/i', $dns, $matches)) {
                 throw new _PDOException('Не удалось выделить имя базы данных из строки подключения');
@@ -161,6 +221,17 @@ class _PDO
 
         if (!$this->tables) {
             throw new _PDOException('Не удалось получить список таблиц');
+        }
+    }
+
+    /**
+     * Добавить дополнительные таблицы используемым
+     */
+    protected function addAdditionTables(): void
+    {
+        $dbms = strtoupper($this->dbdriver);
+        foreach (constant("self::{$dbms}_ADDITIONAL_TABLES") as $table) {
+            $this->tables[]['table_name'] = $table;
         }
     }
 
