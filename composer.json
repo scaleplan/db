@@ -1,5 +1,5 @@
 {
-    "name": "avtomon/_PDO",
+    "name": "avtomon/CachePDO",
     "description": "Yet another PHP PDO wrapper",
     "minimum-stability": "dev",
     "config": {

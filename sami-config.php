@@ -11,7 +11,7 @@ use Sami\{
 $sami = new Sami(__DIR__ . '/src', array(
     'theme'                => 'github',
     //'theme'                => 'markdown',
-    'title'                => '_PDO API',
+    'title'                => 'CachePDO API',
     'build_dir'            => __DIR__.'/docs_ru',
     'cache_dir'            => __DIR__.'/cache',
     'template_dirs'        => [dirname(__DIR__, 3) . '/vendor/avtomon/sami-github'],
