@@ -1,9 +1,9 @@
 # CachePDO
 
-CachePDO is a wrapper class for PHP applications to interact with PostgreSQL and MySQL databases. It allows you to interact with any of these DBMS transparently without delving into the differences of PHP interaction with these systems for the developer - work with both DBMS will be the same in terms of programming.
+CachePDO is a wrapper class for the interoperability of PHP applications with DBMS PostgreSQL and MySQL. It allows you to transparently interact with any of these databases without going into the differences between PHP and these systems for the developer - work with both DBMS will be the same in terms of programming.
 
-The class supports prepared statements. 
-In addition, there is additional functionality to implement the concept of parallel query execution within a single database connection and methods to implement asynchronous query execution.
+The class supports prepared expressions.
+In addition, there is additional functionality for implementing the concept of parallel execution of queries within one connection to the database and methods for implementing asynchronous execution of query packets.
 
 <br>
 

@@ -22,4 +22,4 @@ else
     DESC_FILE="$CURRENT_PATH/README.$TO_LANG-$UPPER_LANG.md"
 fi
 
-`"$TRANS_PATH" -e yandex -no-autocorrect -no-ansi -no-warn "ru:$2" "file://$CURRENT_PATH/README.ru-RU.md" | sed -f translate.sed > "$DESC_FILE"`
+`"$TRANS_PATH" -no-autocorrect -no-ansi -no-warn "ru:$2" "file://$CURRENT_PATH/README.ru-RU.md" | sed -f translate.sed > "$DESC_FILE"`
