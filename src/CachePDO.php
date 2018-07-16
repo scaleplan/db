@@ -110,6 +110,10 @@ class CachePDO
      * @param string[] $schemas - какие схемы будут использоваться
      * @param array $options - дополнительные опции
      * @param bool $isArrayResults - возвращать результат только в виде массива
+     *
+     * @return CachePDO
+     *
+     * @throws CachePDOException
      */
     public static function getInstance(
         string $dns,
@@ -118,7 +122,7 @@ class CachePDO
         array $schemas = [],
         array $options = [],
         bool $isArrayResults = true
-    ) {
+    ): CachePDO {
         $key =
             $dns
             . $login
@@ -143,6 +147,8 @@ class CachePDO
      * @param string[] $schemas - какие схемы будут использоваться
      * @param array $options - дополнительные опции
      * @param bool $isArrayResults - возвращать результат только в виде массива
+     *
+     * @throws CachePDOException
      */
     public function __construct(
         string $dns,
@@ -153,7 +159,7 @@ class CachePDO
         bool $isArrayResults = true
     )
     {
-        if (!preg_match('/^(.+?):/i', $dns, $matches)) {
+        if (!preg_match('/^(.+?):/', $dns, $matches)) {
             throw new CachePDOException('Неверная строка подключения: Не задан драйвер');
         }
 
@@ -210,13 +216,13 @@ class CachePDO
                                               FROM 
                                                 information_schema.tables 
                                               WHERE 
-                                                table_schema IN ('" . implode("', '", $schemas) . "')");
+                                                table_schema IN ('" . implode("', '", $schemas) . "')"));
         } elseif ($this->dbdriver === 'mysql') {
             if (!preg_match('/dbname=(.+?)/i', $dns, $matches)) {
                 throw new CachePDOException('Не удалось выделить имя базы данных из строки подключения');
             }
 
-            $this->tables = $_SESSION['databases'][$dbName]['tables'] = $this->query("SHOW TABLES FROM {$matches[1]}");
+            $_SESSION['databases'][$dbName]['tables'] = $this->tables = array_merge($this->tables, $this->query("SHOW TABLES FROM {$matches[1]}"));
         }
 
         if (!$this->tables) {
@@ -230,7 +236,7 @@ class CachePDO
     protected function addAdditionTables(): void
     {
         $dbms = strtoupper($this->dbdriver);
-        foreach (constant("self::{$dbms}_ADDITIONAL_TABLES") as $table) {
+        foreach (\constant("self::{$dbms}_ADDITIONAL_TABLES") as $table) {
             $this->tables[]['table_name'] = $table;
         }
     }
@@ -257,9 +263,7 @@ class CachePDO
      * @param string[]|string $query - запрос
      * @param array $params - параметры запроса
      *
-     * @return int|array
-     *
-     * @throws CachePDOException
+     * @return array|int
      */
     public function query($query, array $params = [])
     {
@@ -373,6 +377,8 @@ class CachePDO
      * @param string $query - запрос
      *
      * @return array
+     *
+     * @throws CachePDOException
      */
     public function getEditTables(string &$query): array
     {
@@ -544,7 +550,7 @@ class CachePDO
         $this->dbh->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
         try {
             $this->dbh->exec($this->createQStrFromBatch($batch));
-        } catch (CachePDOException $e) {
+        } catch (\PDOException $e) {
             $this->dbh->exec('ROLLBACK');
             throw new CachePDOException('Ошибка выполнения пакета транзакций: ' . $e->getMessage());
         } finally {
@@ -553,5 +559,4 @@ class CachePDO
 
         return true;
     }
-
 }
