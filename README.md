@@ -1,5 +1,14 @@
 # CachePDO
 
+#### Installation
+
+``
+composer reqire avtomon/cachepdo
+``
+<br>
+
+#### Description
+
 CachePDO is a wrapper class for the interoperability of PHP applications with DBMS PostgreSQL and MySQL. It allows you to transparently interact with any of these databases without going into the differences between PHP and these systems for the developer - work with both DBMS will be the same in terms of programming.
 
 The class supports prepared expressions.
