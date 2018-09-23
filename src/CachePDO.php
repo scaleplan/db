@@ -196,7 +196,9 @@ class CachePDO
             $_SESSION['databases'] = [];
         }
 
-        $_SESSION['databases'][$dbName] = ['tables' => []];
+        if (!isset($_SESSION['databases'][$dbName]) || !\is_array($_SESSION['databases'][$dbName])) {
+            $_SESSION['databases'][$dbName] = ['tables' => []];
+        }
 
         $this->addAdditionTables();
 
