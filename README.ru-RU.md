@@ -3,7 +3,7 @@
 #### Установка
 
 ``
-composer reqire avtomon/cachepdo
+composer reqire scaleplan/cache-pdo
 ``
 <br>
 

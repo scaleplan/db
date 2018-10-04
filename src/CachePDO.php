@@ -19,7 +19,8 @@ use Scaleplan\CachePDO\Exceptions\QueryExecutionException;
  * асинхронного выполнения пакетов запросов.
  *
  * Class CachePDO
- * @package avtomon
+ *
+ * @package Scaleplan\CachePDO
  */
 class CachePDO
 {

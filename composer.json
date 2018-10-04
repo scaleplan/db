@@ -3,7 +3,7 @@
     "description": "Scaleplan PDO and cache wrapper",
     "autoload": {
         "psr-4": {
-            "avtomon\\": "src/"
+            "Scaleplan\\CachePDO\\": "src/"
         }
     },
     "require": {
