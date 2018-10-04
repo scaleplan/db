@@ -1,16 +1,14 @@
 <?php
 
-namespace avtomon;
+namespace Scaleplan\CachePDO;
 
-/**
- * Класс ошибки
- *
- * Class CachePDOException
- * @package avtomon
- */
-class CachePDOException extends \PDOException
-{
-}
+use Scaleplan\CachePDO\Exceptions\AsyncExecutionException;
+use Scaleplan\CachePDO\Exceptions\BatchExecutionException;
+use Scaleplan\CachePDO\Exceptions\CachePDOException;
+use Scaleplan\CachePDO\Exceptions\ConnectionStringException;
+use Scaleplan\CachePDO\Exceptions\ParallelExecutionException;
+use Scaleplan\CachePDO\Exceptions\PDOConnectionException;
+use Scaleplan\CachePDO\Exceptions\QueryExecutionException;
 
 /**
  * CachePDO представляет собой класс-обертку для взаимодествия PHP-приложения с СУБД PostgreSQL и MySQL.
@@ -113,7 +111,8 @@ class CachePDO
      *
      * @return CachePDO
      *
-     * @throws CachePDOException
+     * @throws ConnectionStringException
+     * @throws PDOConnectionException
      */
     public static function getInstance(
         string $dns,
@@ -148,7 +147,8 @@ class CachePDO
      * @param array $options - дополнительные опции
      * @param bool $isArrayResults - возвращать результат только в виде массива
      *
-     * @throws CachePDOException
+     * @throws ConnectionStringException
+     * @throws PDOConnectionException
      */
     public function __construct(
         string $dns,
@@ -160,23 +160,25 @@ class CachePDO
     )
     {
         if (!preg_match('/^(.+?):/', $dns, $matches)) {
-            throw new CachePDOException('Неверная строка подключения: Не задан драйвер');
+            throw new ConnectionStringException('Неверная строка подключения: Не задан драйвер');
         }
 
         if (!\in_array($matches[1], self::ALLOW_DRIVERS, true)) {
-            throw new CachePDOException("Подключение с использование драйвера {$matches[1]} недоступно");
+            throw new ConnectionStringException(
+                "Подключение с использование драйвера {$matches[1]} недоступно"
+            );
         }
 
         $this->dbdriver = $matches[1];
 
         if (!preg_match('/dbname=(.+)/i', $dns, $matches)) {
-            throw new CachePDOException('Не удалось выделить имя базы данных из строки подключения');
+            throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
         }
 
         $dbName = $matches[1];
 
         if (empty($this->dbh = new \PDO($dns, $login, $password, $options))) {
-            throw new CachePDOException('Не удалось создать объект PDO');
+            throw new PDOConnectionException();
         }
 
         $this->dbh->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
@@ -221,19 +223,23 @@ class CachePDO
                                                 table_schema IN ('" . implode("', '", $schemas) . "')"));
         } elseif ($this->dbdriver === 'mysql') {
             if (!preg_match('/dbname=(.+?)/i', $dns, $matches)) {
-                throw new CachePDOException('Не удалось выделить имя базы данных из строки подключения');
+                throw new ConnectionStringException(
+                    'Не удалось выделить имя базы данных из строки подключения'
+                );
             }
 
-            $_SESSION['databases'][$dbName]['tables'] = $this->tables = array_merge($this->tables, $this->query("SHOW TABLES FROM {$matches[1]}"));
+            $_SESSION['databases'][$dbName]['tables']
+                = $this->tables
+                = array_merge($this->tables, $this->query("SHOW TABLES FROM {$matches[1]}"));
         }
 
         if (!$this->tables) {
-            throw new CachePDOException('Не удалось получить список таблиц');
+            throw new PDOConnectionException('Не удалось получить список таблиц');
         }
     }
 
     /**
-     * Добавить дополнительные таблицы используемым
+     * Добавить дополнительные таблицы к используемым
      */
     protected function addAdditionTables(): void
     {
@@ -278,7 +284,7 @@ class CachePDO
             }
 
             if (!$sth) {
-                throw new CachePDOException('Не удалось выполнить запрос');
+                throw new QueryExecutionException();
             }
 
             $rowCount += $sth->rowCount();
@@ -379,8 +385,6 @@ class CachePDO
      * @param string $query - запрос
      *
      * @return array
-     *
-     * @throws CachePDOException
      */
     public function getEditTables(string &$query): array
     {
@@ -397,8 +401,6 @@ class CachePDO
      * @param string $query - запрос
      *
      * @return array
-     *
-     * @throws CachePDOException
      */
     public function getTables(string &$query): array
     {
@@ -425,7 +427,7 @@ class CachePDO
     public function parallelExecute(array $batch): array
     {
         if ($this->dbdriver !== 'pgsql') {
-            throw new CachePDOException('Поддерживается только PostgreSQL');
+            throw new ParallelExecutionException('Поддерживается только PostgreSQL');
         }
 
         if (!\count($this->query("SELECT proname FROM pg_proc WHERE proname = 'execute_multiple'"))) {
@@ -472,19 +474,23 @@ class CachePDO
     public function async($query, array $data = null): bool
     {
         if ($this->dbdriver !== 'pgsql') {
-            throw new CachePDOException('Поддерживается только PostgreSQL');
+            throw new AsyncExecutionException('Поддерживается только PostgreSQL');
         }
 
         if (!\extension_loaded('pgsql')) {
-            throw new CachePDOException('Для асинхронного выполнения запросов требуется расширение pgsql');
+            throw new AsyncExecutionException(
+                'Для асинхронного выполнения запросов требуется расширение pgsql'
+            );
         }
 
         if (!$db = pg_connect($this->dns)) {
-            throw new CachePDOException('Не удалось подключиться к БД через нативный драйвер');
+            throw new AsyncExecutionException('Не удалось подключиться к БД через нативный драйвер');
         }
 
         if (!\is_array($query) && !\is_string($query)) {
-            throw new CachePDOException('Первый параметр должен быть строкой запроса или массивом запросов');
+            throw new AsyncExecutionException(
+                'Первый параметр должен быть строкой запроса или массивом запросов'
+            );
         }
 
         if (!$data) {
@@ -495,10 +501,10 @@ class CachePDO
             $result = pg_send_query($db, $queryStr);
             if (!$result) {
                 if (\is_array($query)) {
-                    throw new CachePDOException('Не удалось выполнить пакет запросов');
+                    throw new AsyncExecutionException('Не удалось выполнить пакет запросов');
                 }
 
-                throw new CachePDOException('Не удалось выполнить запрос');
+                throw new AsyncExecutionException('Не удалось выполнить запрос');
             }
 
             pg_close($db);
@@ -507,7 +513,9 @@ class CachePDO
         }
 
         if (\is_array($query)) {
-            throw new CachePDOException('Для асинхронного выполнения подготовленных запросов недоступно использование пакета запросов');
+            throw new AsyncExecutionException(
+                'Для асинхронного выполнения подготовленных запросов недоступно использование пакета запросов'
+            );
         }
 
         if (!pg_send_query_params($db, $query, $data)) {
@@ -554,7 +562,7 @@ class CachePDO
             $this->dbh->exec($this->createQStrFromBatch($batch));
         } catch (\PDOException $e) {
             $this->dbh->exec('ROLLBACK');
-            throw new CachePDOException('Ошибка выполнения пакета транзакций: ' . $e->getMessage());
+            throw new BatchExecutionException('Ошибка выполнения пакета транзакций: ' . $e->getMessage());
         } finally {
             $this->dbh->setAttribute(\PDO::ATTR_EMULATE_PREPARES, $oldAttrEmulatePrepares);
         }
