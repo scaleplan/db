@@ -1,10 +1,6 @@
 {
-    "name": "avtomon/CachePDO",
-    "description": "Yet another PHP PDO wrapper",
-    "minimum-stability": "dev",
-    "config": {
-        "process-timeout": 1800
-    },
+    "name": "scaleplan/cache-pdo",
+    "description": "Scaleplan PDO and cache wrapper",
     "autoload": {
         "psr-4": {
             "avtomon\\": "src/"
