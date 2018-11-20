@@ -77,7 +77,7 @@ class CachePDO
      *
      * @var string
      */
-    protected $dbdriver = '';
+    protected $dbDriver = '';
 
     /**
      * Список таблиц БД
@@ -131,11 +131,11 @@ class CachePDO
             . json_encode($options, JSON_UNESCAPED_UNICODE)
             . (string) $isArrayResults;
 
-        if (empty(self::$instances[$key])) {
-            self::$instances[$key] = new CachePDO($dns, $login, $password, $schemas, $options, $isArrayResults);
+        if (empty(static::$instances[$key])) {
+            static::$instances[$key] = new CachePDO($dns, $login, $password, $schemas, $options, $isArrayResults);
         }
 
-        return self::$instances[$key];
+        return static::$instances[$key];
     }
 
     /**
@@ -164,13 +164,13 @@ class CachePDO
             throw new ConnectionStringException('Неверная строка подключения: Не задан драйвер');
         }
 
-        if (!\in_array($matches[1], self::ALLOW_DRIVERS, true)) {
+        if (!\in_array($matches[1], static::ALLOW_DRIVERS, true)) {
             throw new ConnectionStringException(
                 "Подключение с использование драйвера {$matches[1]} недоступно"
             );
         }
 
-        $this->dbdriver = $matches[1];
+        $this->dbDriver = $matches[1];
 
         if (!preg_match('/dbname=(.+)/i', $dns, $matches)) {
             throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
@@ -205,24 +205,19 @@ class CachePDO
 
         $this->addAdditionTables();
 
-        if ($this->dbdriver === 'pgsql') {
-            self::initSessionStorage($dbName);
+        if ($this->dbDriver === 'pgsql') {
+            static::initSessionStorage($dbName);
 
-            $_SESSION['databases'][$dbName]['tables'] = $this->tables = array_merge($this->tables, $this->query(
-                                      "SELECT 
-                                               (CASE 
-                                                  WHEN 
-                                                    table_schema = 'public' 
-                                                  THEN 
-                                                    '' 
-                                                  ELSE 
-                                                    table_schema || '.' 
-                                                END) || table_name AS table_name 
-                                              FROM 
-                                                information_schema.tables 
-                                              WHERE 
-                                                table_schema IN ('" . implode("', '", $schemas) . "')"));
-        } elseif ($this->dbdriver === 'mysql') {
+            $_SESSION['databases'][$dbName]['tables']
+                = $this->tables = array_merge($this->tables, $this->query(
+                    "SELECT 
+                        (CASE WHEN table_schema = 'public' 
+                              THEN '' 
+                              ELSE table_schema || '.' 
+                         END) || table_name AS table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema IN ('" . implode("', '", $schemas) . "')"));
+        } elseif ($this->dbDriver === 'mysql') {
             if (!preg_match('/dbname=(.+?)/i', $dns, $matches)) {
                 throw new ConnectionStringException(
                     'Не удалось выделить имя базы данных из строки подключения'
@@ -244,8 +239,8 @@ class CachePDO
      */
     protected function addAdditionTables(): void
     {
-        $dbms = strtoupper($this->dbdriver);
-        foreach (\constant("self::{$dbms}_ADDITIONAL_TABLES") as $table) {
+        $dbms = strtoupper($this->dbDriver);
+        foreach (\constant("static::{$dbms}_ADDITIONAL_TABLES") as $table) {
             $this->tables[]['table_name'] = $table;
         }
     }
@@ -325,7 +320,7 @@ class CachePDO
      */
     public function getDBDriver(): string
     {
-        return $this->dbdriver;
+        return $this->dbDriver;
     }
 
     /**
@@ -427,12 +422,12 @@ class CachePDO
      */
     public function parallelExecute(array $batch): array
     {
-        if ($this->dbdriver !== 'pgsql') {
+        if ($this->dbDriver !== 'pgsql') {
             throw new ParallelExecutionException('Поддерживается только PostgreSQL');
         }
 
         if (!\count($this->query("SELECT proname FROM pg_proc WHERE proname = 'execute_multiple'"))) {
-            $sql = file_get_contents(self::EXECUTE_MULTIPLE_PATH);
+            $sql = file_get_contents(static::EXECUTE_MULTIPLE_PATH);
             $this->dbh->exec($sql);
         }
 
@@ -445,7 +440,7 @@ class CachePDO
         $query = trim($query, ',');
         $count = \count($batch);
 
-        $count = self::DB_MAX_PARALLEL_CONNECTS <= $count ? self::DB_MAX_PARALLEL_CONNECTS : $count;
+        $count = static::DB_MAX_PARALLEL_CONNECTS <= $count ? static::DB_MAX_PARALLEL_CONNECTS : $count;
         $query .= "], $count, '" . $this->dns . "') AS failed";
 
         $result = $this->query($query);
@@ -474,7 +469,7 @@ class CachePDO
      */
     public function async($query, array $data = null): bool
     {
-        if ($this->dbdriver !== 'pgsql') {
+        if ($this->dbDriver !== 'pgsql') {
             throw new AsyncExecutionException('Поддерживается только PostgreSQL');
         }
 
