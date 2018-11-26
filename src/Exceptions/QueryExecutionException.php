@@ -1,13 +1,13 @@
 <?php
 
-namespace Scaleplan\CachePDO\Exceptions;
+namespace Scaleplan\Db\Exceptions;
 
 /**
  * Class QueryExecutionException
  *
  * @package Scaleplan\Templater\Exceptions
  */
-class QueryExecutionException extends CachePDOException
+class QueryExecutionException extends DbException
 {
     public const MESSAGE = 'Query execution error.';
 }

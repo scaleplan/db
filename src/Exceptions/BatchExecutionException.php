@@ -1,13 +1,13 @@
 <?php
 
-namespace Scaleplan\CachePDO\Exceptions;
+namespace Scaleplan\Db\Exceptions;
 
 /**
  * Class BatchExecutionException
  *
  * @package Scaleplan\Templater\Exceptions
  */
-class BatchExecutionException extends CachePDOException
+class BatchExecutionException extends DbException
 {
     public const MESSAGE = 'Batch execution error.';
 }

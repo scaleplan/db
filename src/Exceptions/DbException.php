@@ -1,18 +1,18 @@
 <?php
 
-namespace Scaleplan\CachePDO\Exceptions;
+namespace Scaleplan\Db\Exceptions;
 
 /**
- * Class CachePDOException
+ * Class DbException
  *
  * @package Scaleplan\Templater\Exceptions
  */
-class CachePDOException extends \Exception
+class DbException extends \Exception
 {
-    public const MESSAGE = 'CachePDO error.';
+    public const MESSAGE = 'Db error.';
 
     /**
-     * CachePDOException constructor.
+     * DbException constructor.
      *
      * @param string|null $message
      * @param int $code

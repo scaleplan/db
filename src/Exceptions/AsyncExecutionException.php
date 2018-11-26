@@ -1,13 +1,13 @@
 <?php
 
-namespace Scaleplan\CachePDO\Exceptions;
+namespace Scaleplan\Db\Exceptions;
 
 /**
  * Class AsyncExecutionException
  *
  * @package Scaleplan\Templater\Exceptions
  */
-class AsyncExecutionException extends CachePDOException
+class AsyncExecutionException extends DbException
 {
     public const MESSAGE = 'Async execution error.';
 }

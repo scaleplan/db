@@ -1,13 +1,13 @@
 <?php
 
-namespace Scaleplan\CachePDO\Exceptions;
+namespace Scaleplan\Db\Exceptions;
 
 /**
- * Class CachePDOException
+ * Class DbException
  *
  * @package Scaleplan\Templater\Exceptions
  */
-class ConnectionStringException extends CachePDOException
+class ConnectionStringException extends DbException
 {
     public const MESSAGE = 'Connection string error.';
 }

@@ -1,28 +1,29 @@
 <?php
 
-namespace Scaleplan\CachePDO;
+namespace Scaleplan\Db;
 
-use Scaleplan\CachePDO\Exceptions\AsyncExecutionException;
-use Scaleplan\CachePDO\Exceptions\BatchExecutionException;
-use Scaleplan\CachePDO\Exceptions\CachePDOException;
-use Scaleplan\CachePDO\Exceptions\ConnectionStringException;
-use Scaleplan\CachePDO\Exceptions\ParallelExecutionException;
-use Scaleplan\CachePDO\Exceptions\PDOConnectionException;
-use Scaleplan\CachePDO\Exceptions\QueryExecutionException;
+use Scaleplan\Db\Exceptions\AsyncExecutionException;
+use Scaleplan\Db\Exceptions\BatchExecutionException;
+use Scaleplan\Db\Exceptions\DbException;
+use Scaleplan\Db\Exceptions\ConnectionStringException;
+use Scaleplan\Db\Exceptions\ParallelExecutionException;
+use Scaleplan\Db\Exceptions\PDOConnectionException;
+use Scaleplan\Db\Exceptions\QueryCountNotMatchParamsException;
+use Scaleplan\Db\Exceptions\QueryExecutionException;
 
 /**
- * CachePDO представляет собой класс-обертку для взаимодествия PHP-приложения с СУБД PostgreSQL и MySQL.
+ * Db представляет собой класс-обертку для взаимодествия PHP-приложения с СУБД PostgreSQL и MySQL.
  * Позволяет прозрачно взаимодействовать с любой из этих СУБД не вникая в различия взаимодейтвия PHP с этими системами –
  * для разработчика работа с обоими СУБД будет одинакова с точки зрения программирования.
  * Класс поддерживает подготовленные выражения. Кроме того есть дополнительная функциональность для реализации концепции
  * параллельного выполнения запросов внутри одного подключени к базе данных. А так же есть методы для реализации
  * асинхронного выполнения пакетов запросов.
  *
- * Class CachePDO
+ * Class Db
  *
- * @package Scaleplan\CachePDO
+ * @package Scaleplan\Db
  */
-class CachePDO
+class Db
 {
     /**
      * Доступные драйвера СУБД
@@ -94,14 +95,14 @@ class CachePDO
     protected $isArrayResults = true;
 
     /**
-     * Сохраненные объекты CachePDO
+     * Сохраненные объекты Db
      *
      * @var array
      */
     public static $instances = [];
 
     /**
-     * Фабрика CachePDO
+     * Фабрика Db
      *
      * @param string $dns - строка подключения
      * @param string $login - пользователь БД
@@ -110,7 +111,7 @@ class CachePDO
      * @param array $options - дополнительные опции
      * @param bool $isArrayResults - возвращать результат только в виде массива
      *
-     * @return CachePDO
+     * @return Db
      *
      * @throws ConnectionStringException
      * @throws PDOConnectionException
@@ -122,7 +123,7 @@ class CachePDO
         array $schemas = [],
         array $options = [],
         bool $isArrayResults = true
-    ): CachePDO {
+    ): Db {
         $key =
             $dns
             . $login
@@ -132,7 +133,7 @@ class CachePDO
             . (string) $isArrayResults;
 
         if (empty(static::$instances[$key])) {
-            static::$instances[$key] = new CachePDO($dns, $login, $password, $schemas, $options, $isArrayResults);
+            static::$instances[$key] = new Db($dns, $login, $password, $options, $isArrayResults);
         }
 
         return static::$instances[$key];
@@ -144,7 +145,6 @@ class CachePDO
      * @param string $dns - строка подключения
      * @param string $login - пользователь БД
      * @param string $password - пароль
-     * @param string[] $schemas - какие схемы будут использоваться
      * @param array $options - дополнительные опции
      * @param bool $isArrayResults - возвращать результат только в виде массива
      *
@@ -155,7 +155,6 @@ class CachePDO
         string $dns,
         string $login,
         string $password,
-        array $schemas = [],
         array $options = [],
         bool $isArrayResults = true
     )
@@ -172,12 +171,6 @@ class CachePDO
 
         $this->dbDriver = $matches[1];
 
-        if (!preg_match('/dbname=(.+)/i', $dns, $matches)) {
-            throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
-        }
-
-        $dbName = $matches[1];
-
         if (empty($this->dbh = new \PDO($dns, $login, $password, $options))) {
             throw new PDOConnectionException();
         }
@@ -189,6 +182,22 @@ class CachePDO
         $this->dns = $dns;
 
         $this->isArrayResults = $isArrayResults;
+    }
+
+    /**
+     * @param string[] $schemas - какие схемы будут использоваться
+     *
+     * @throws ConnectionStringException
+     * @throws PDOConnectionException
+     * @throws QueryCountNotMatchParamsException
+     */
+    public function initTablesList(array $schemas)
+    {
+        if (!preg_match('/dbname=(.+)/i', $this->dns, $matches)) {
+            throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
+        }
+
+        $dbName = $matches[1];
 
         if (!empty($_SESSION['databases'][$dbName]['tables'])) {
             $this->tables = $_SESSION['databases'][$dbName]['tables'];
@@ -210,7 +219,7 @@ class CachePDO
 
             $_SESSION['databases'][$dbName]['tables']
                 = $this->tables = array_merge($this->tables, $this->query(
-                    "SELECT 
+                "SELECT 
                         (CASE WHEN table_schema = 'public' 
                               THEN '' 
                               ELSE table_schema || '.' 
@@ -218,7 +227,7 @@ class CachePDO
                     FROM information_schema.tables 
                     WHERE table_schema IN ('" . implode("', '", $schemas) . "')"));
         } elseif ($this->dbDriver === 'mysql') {
-            if (!preg_match('/dbname=(.+?)/i', $dns, $matches)) {
+            if (!preg_match('/dbname=(.+?)/i', $this->dns, $matches)) {
                 throw new ConnectionStringException(
                     'Не удалось выделить имя базы данных из строки подключения'
                 );
@@ -268,6 +277,8 @@ class CachePDO
      * @param array $params - параметры запроса
      *
      * @return array|int
+     *
+     * @throws QueryCountNotMatchParamsException
      */
     public function query($query, array $params = [])
     {
@@ -288,7 +299,11 @@ class CachePDO
         };
 
         $rowCount = 0;
-        if (\is_array($query) && isset($params[0]) && \count($query) === \count($params)) {
+        if (\is_array($query)) {
+            if (!isset($params[0]) && \count($query) !== \count($params)) {
+                throw new QueryCountNotMatchParamsException();
+            }
+
             $this->dbh->beginTransaction();
             foreach ($query as $key => & $value) {
                 $execQuery($params[$key], $value, $rowCount);
@@ -384,7 +399,7 @@ class CachePDO
      */
     public function getEditTables(string &$query): array
     {
-        if (preg_match('/(UPDATE\s|INSERT\sINTO\s|DELETE\s|CREATE\sTYPE)/', $query)) {
+        if (preg_match('/(UPDATE\s|INSERT\sINTO\s|DELETE\s|ALTER\sTYPE)/', $query)) {
             return $this->getTables($query);
         }
 
@@ -409,116 +424,6 @@ class CachePDO
 
         unset($table);
         return $tables;
-    }
-
-    /**
-     * Выполнить параллельно пакет запросов. Актуально для PostgreSQL
-     *
-     * @param string[] $batch - массив транзакций
-     *
-     * @return array
-     *
-     * @throws CachePDOException
-     */
-    public function parallelExecute(array $batch): array
-    {
-        if ($this->dbDriver !== 'pgsql') {
-            throw new ParallelExecutionException('Поддерживается только PostgreSQL');
-        }
-
-        if (!\count($this->query("SELECT proname FROM pg_proc WHERE proname = 'execute_multiple'"))) {
-            $sql = file_get_contents(static::EXECUTE_MULTIPLE_PATH);
-            $this->dbh->exec($sql);
-        }
-
-        $query = 'SELECT execute_multiple(ARRAY[';
-        foreach ($batch as & $t) {
-            $query .= "'" . implode(';', $t) . "',";
-        }
-
-        unset($t);
-        $query = trim($query, ',');
-        $count = \count($batch);
-
-        $count = static::DB_MAX_PARALLEL_CONNECTS <= $count ? static::DB_MAX_PARALLEL_CONNECTS : $count;
-        $query .= "], $count, '" . $this->dns . "') AS failed";
-
-        $result = $this->query($query);
-
-        $failed = explode(',', $result[0]['failed']);
-        foreach ($batch as $key => &$value) {
-            if (!\in_array($key + 1, $failed, true)) {
-                unset($batch[$key]);
-            }
-        }
-
-        unset($value);
-
-        return $batch;
-    }
-
-    /**
-     * Отправить асинхронно пакет транзакций на сервер (актуально для PostgreSQL)
-     *
-     * @param string[]|string $query - запрос или массив запросов
-     * @param array $data - параметры подготовленного запроса
-     *
-     * @return bool
-     *
-     * @throws CachePDOException
-     */
-    public function async($query, array $data = null): bool
-    {
-        if ($this->dbDriver !== 'pgsql') {
-            throw new AsyncExecutionException('Поддерживается только PostgreSQL');
-        }
-
-        if (!\extension_loaded('pgsql')) {
-            throw new AsyncExecutionException(
-                'Для асинхронного выполнения запросов требуется расширение pgsql'
-            );
-        }
-
-        if (!$db = pg_connect($this->dns)) {
-            throw new AsyncExecutionException('Не удалось подключиться к БД через нативный драйвер');
-        }
-
-        if (!\is_array($query) && !\is_string($query)) {
-            throw new AsyncExecutionException(
-                'Первый параметр должен быть строкой запроса или массивом запросов'
-            );
-        }
-
-        if (!$data) {
-            $queryStr = $query;
-            if (\is_array($query)) {
-                $queryStr = $this->createQStrFromBatch($query);
-            }
-            $result = pg_send_query($db, $queryStr);
-            if (!$result) {
-                if (\is_array($query)) {
-                    throw new AsyncExecutionException('Не удалось выполнить пакет запросов');
-                }
-
-                throw new AsyncExecutionException('Не удалось выполнить запрос');
-            }
-
-            pg_close($db);
-
-            return true;
-        }
-
-        if (\is_array($query)) {
-            throw new AsyncExecutionException(
-                'Для асинхронного выполнения подготовленных запросов недоступно использование пакета запросов'
-            );
-        }
-
-        if (!pg_send_query_params($db, $query, $data)) {
-            throw new CachePDOException(pg_last_error($db));
-        }
-
-        return true;
     }
 
     /**
@@ -548,7 +453,7 @@ class CachePDO
      *
      * @return bool
      *
-     * @throws CachePDOException
+     * @throws DbException
      */
     public function execBatch(array $batch): bool
     {

@@ -1,13 +1,13 @@
 <?php
 
-namespace Scaleplan\CachePDO\Exceptions;
+namespace Scaleplan\Db\Exceptions;
 
 /**
- * Class CachePDOException
+ * Class DbException
  *
  * @package Scaleplan\Templater\Exceptions
  */
-class ParallelExecutionException extends CachePDOException
+class ParallelExecutionException extends DbException
 {
     public const MESSAGE = 'Parallel execution error.';
 }

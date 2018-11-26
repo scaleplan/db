@@ -1,9 +1,9 @@
 {
-    "name": "scaleplan/cache-pdo",
-    "description": "Scaleplan PDO and cache wrapper",
+    "name": "scaleplan/db",
+    "description": "Scaleplan PDO wrapper and additional database functional",
     "autoload": {
         "psr-4": {
-            "Scaleplan\\CachePDO\\": "src/"
+            "Scaleplan\\Db\\": "src/"
         }
     },
     "require": {
