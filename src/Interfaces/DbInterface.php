@@ -2,9 +2,7 @@
 
 namespace Scaleplan\Db\Interfaces;
 
-use Scaleplan\Db\Exceptions\ConnectionStringException;
 use Scaleplan\Db\Exceptions\DbException;
-use Scaleplan\Db\Exceptions\PDOConnectionException;
 use Scaleplan\Db\Exceptions\QueryCountNotMatchParamsException;
 
 /**
@@ -15,13 +13,9 @@ use Scaleplan\Db\Exceptions\QueryCountNotMatchParamsException;
 interface DbInterface
 {
     /**
-     * @param string[] $schemas - какие схемы будут использоваться
-     *
-     * @throws ConnectionStringException
-     * @throws PDOConnectionException
-     * @throws QueryCountNotMatchParamsException
+     * @return string
      */
-    public function initTablesList(array $schemas);
+    public function getDsn() : string;
 
     /**
      * Сделать запрос к БД, поддерживает подготовленные выражения
@@ -69,24 +63,6 @@ interface DbInterface
      * @return bool
      */
     public function rollBack() : bool;
-
-    /**
-     * Возвращаем имена таблиц использующихся в запросе только для запросов на изменение
-     *
-     * @param string $query - запрос
-     *
-     * @return array
-     */
-    public function getEditTables(string &$query) : array;
-
-    /**
-     * Возвращаем имена таблиц использующихся в запросе
-     *
-     * @param string $query - запрос
-     *
-     * @return array
-     */
-    public function getTables(string &$query) : array;
 
     /**
      * Выполнить пакет транзакций с проверкой результата выполнения. Актуально для PostgreSQL

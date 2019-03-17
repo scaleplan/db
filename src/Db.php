@@ -30,16 +30,6 @@ class Db implements DbInterface
     public const ALLOW_DRIVERS = ['pgsql', 'mysql'];
 
     /**
-     * С какими схемами дополнительно будет рабоать объект при подключении к PosqlgreSQL
-     */
-    public const PGSQL_ADDITIONAL_TABLES = ['pg_type', 'pg_enum'];
-
-    /**
-     * С какими схемами дополнительно будет рабоать объект при подключении к MySQL
-     */
-    public const MYSQL_ADDITIONAL_TABLES = [];
-
-    /**
      * Код указывающий на ошибку произошедшую при попытке добавить дубликат данных
      */
     public const DUPLICATE_ERROR_CODE = '42P04';
@@ -59,7 +49,7 @@ class Db implements DbInterface
      *
      * @var string
      */
-    protected $dns = '';
+    protected $dsn = '';
 
     /**
      * Хэндлер подключения к БД
@@ -99,10 +89,9 @@ class Db implements DbInterface
     /**
      * Фабрика Db
      *
-     * @param string $dns - строка подключения
+     * @param string $dsn - строка подключения
      * @param string $login - пользователь БД
      * @param string $password - пароль
-     * @param string[] $schemas - какие схемы будут использоваться
      * @param array $options - дополнительные опции
      * @param bool $isArrayResults - возвращать результат только в виде массива
      *
@@ -112,24 +101,22 @@ class Db implements DbInterface
      * @throws PDOConnectionException
      */
     public static function getInstance(
-        string $dns,
+        string $dsn,
         string $login,
         string $password,
-        array $schemas = [],
         array $options = [],
         bool $isArrayResults = true
     ) : Db
     {
         $key =
-            $dns
+            $dsn
             . $login
             . $password
-            . json_encode($schemas, JSON_UNESCAPED_UNICODE)
             . json_encode($options, JSON_UNESCAPED_UNICODE)
             . $isArrayResults;
 
         if (empty(static::$instances[$key])) {
-            static::$instances[$key] = new Db($dns, $login, $password, $options, $isArrayResults);
+            static::$instances[$key] = new Db($dsn, $login, $password, $options, $isArrayResults);
         }
 
         return static::$instances[$key];
@@ -138,7 +125,7 @@ class Db implements DbInterface
     /**
      * Конструктор. Намеренно сделан открытым чтобы дать большую гибкость
      *
-     * @param string $dns - строка подключения
+     * @param string $dsn - строка подключения
      * @param string $login - пользователь БД
      * @param string $password - пароль
      * @param array $options - дополнительные опции
@@ -148,14 +135,14 @@ class Db implements DbInterface
      * @throws PDOConnectionException
      */
     public function __construct(
-        string $dns,
+        string $dsn,
         string $login,
         string $password,
         array $options = [],
         \bool $isArrayResults = true
     )
     {
-        if (!preg_match('/^(.+?):/', $dns, $matches)) {
+        if (!preg_match('/^(.+?):/', $dsn, $matches)) {
             throw new ConnectionStringException('Неверная строка подключения: Не задан драйвер');
         }
 
@@ -167,7 +154,7 @@ class Db implements DbInterface
 
         $this->dbDriver = $matches[1];
 
-        if (empty($this->dbh = new \PDO($dns, $login, $password, $options))) {
+        if (empty($this->dbh = new \PDO($dsn, $login, $password, $options))) {
             throw new PDOConnectionException();
         }
 
@@ -175,96 +162,17 @@ class Db implements DbInterface
         $this->dbh->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_TO_STRING);
         $this->dbh->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
 
-        $this->dns = $dns;
+        $this->dsn = $dsn;
 
         $this->isArrayResults = $isArrayResults;
     }
 
     /**
-     * @param string[] $schemas - какие схемы будут использоваться
-     *
-     * @throws ConnectionStringException
-     * @throws PDOConnectionException
-     * @throws QueryCountNotMatchParamsException
-     * @throws QueryExecutionException
+     * @return string
      */
-    public function initTablesList(array $schemas) : void
+    public function getDsn() : string
     {
-        if (!preg_match('/dbname=(.+)/i', $this->dns, $matches)) {
-            throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
-        }
-
-        $dbName = $matches[1];
-
-        if (!empty($_SESSION['databases'][$dbName]['tables'])) {
-            $this->tables = $_SESSION['databases'][$dbName]['tables'];
-            return;
-        }
-
-        if (!isset($_SESSION['databases']) || !\is_array($_SESSION['databases'])) {
-            $_SESSION['databases'] = [];
-        }
-
-        if (!isset($_SESSION['databases'][$dbName]) || !\is_array($_SESSION['databases'][$dbName])) {
-            $_SESSION['databases'][$dbName] = ['tables' => []];
-        }
-
-        $this->addAdditionTables();
-
-        if ($this->dbDriver === 'pgsql') {
-            static::initSessionStorage($dbName);
-
-            $_SESSION['databases'][$dbName]['tables']
-                = $this->tables = array_merge($this->tables, $this->query(
-                    "SELECT 
-                        (CASE WHEN table_schema = 'public' 
-                              THEN '' 
-                              ELSE table_schema || '.' 
-                         END) || table_name AS table_name 
-                    FROM information_schema.tables 
-                    WHERE table_schema = ANY(string_to_array(" . implode("', '", $schemas) . '))'));
-        } elseif ($this->dbDriver === 'mysql') {
-            if (!preg_match('/dbname=(.+?)/i', $this->dns, $matches)) {
-                throw new ConnectionStringException(
-                    'Не удалось выделить имя базы данных из строки подключения'
-                );
-            }
-
-            $_SESSION['databases'][$dbName]['tables']
-                = $this->tables
-                = array_merge($this->tables, $this->query("SHOW TABLES FROM {$matches[1]}"));
-        }
-
-        if (!$this->tables) {
-            throw new PDOConnectionException('Не удалось получить список таблиц');
-        }
-    }
-
-    /**
-     * Добавить дополнительные таблицы к используемым
-     */
-    protected function addAdditionTables() : void
-    {
-        $dbms = strtoupper($this->dbDriver);
-        foreach (\constant("static::{$dbms}_ADDITIONAL_TABLES") as $table) {
-            $this->tables[]['table_name'] = $table;
-        }
-    }
-
-    /**
-     * Инициализировать хранение имен таблиц в сессии
-     *
-     * @param string $dbName - имя базы данных
-     */
-    protected static function initSessionStorage(string $dbName) : void
-    {
-        if (!isset($_SESSION['databases'])) {
-            $_SESSION['databases'] = [];
-        }
-
-        if (!isset($_SESSION['databases'][$dbName])) {
-            $_SESSION['databases'][$dbName] = [];
-        }
+        return $this->dsn;
     }
 
     /**
@@ -396,42 +304,6 @@ class Db implements DbInterface
         } catch (\PDOException $e) {
             return false;
         }
-    }
-
-    /**
-     * Возвращаем имена таблиц использующихся в запросе только для запросов на изменение
-     *
-     * @param string $query - запрос
-     *
-     * @return array
-     */
-    public function getEditTables(string &$query) : array
-    {
-        if (preg_match('/(UPDATE\s|INSERT\sINTO\s|DELETE\s|ALTER\sTYPE)/', $query)) {
-            return $this->getTables($query);
-        }
-
-        return [];
-    }
-
-    /**
-     * Возвращаем имена таблиц использующихся в запросе
-     *
-     * @param string $query - запрос
-     *
-     * @return array
-     */
-    public function getTables(string &$query) : array
-    {
-        $tables = [];
-        foreach ($this->tables as & $table) {
-            if (strpos($query, $table['table_name']) !== false) {
-                $tables[] = $table['table_name'];
-            }
-        }
-
-        unset($table);
-        return $tables;
     }
 
     /**
