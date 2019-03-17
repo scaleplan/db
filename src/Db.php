@@ -2,14 +2,13 @@
 
 namespace Scaleplan\Db;
 
-use Scaleplan\Db\Exceptions\AsyncExecutionException;
 use Scaleplan\Db\Exceptions\BatchExecutionException;
 use Scaleplan\Db\Exceptions\DbException;
 use Scaleplan\Db\Exceptions\ConnectionStringException;
-use Scaleplan\Db\Exceptions\ParallelExecutionException;
 use Scaleplan\Db\Exceptions\PDOConnectionException;
 use Scaleplan\Db\Exceptions\QueryCountNotMatchParamsException;
 use Scaleplan\Db\Exceptions\QueryExecutionException;
+use Scaleplan\Db\Interfaces\DbInterface;
 
 /**
  * Db представляет собой класс-обертку для взаимодествия PHP-приложения с СУБД PostgreSQL и MySQL.
@@ -23,7 +22,7 @@ use Scaleplan\Db\Exceptions\QueryExecutionException;
  *
  * @package Scaleplan\Db
  */
-class Db
+class Db implements DbInterface
 {
     /**
      * Доступные драйвера СУБД
@@ -47,15 +46,11 @@ class Db
 
     /**
      * Максимальное число параллельных транзакций
-     *
-     * @const int
      */
     protected const DB_MAX_PARALLEL_CONNECTS = 10;
 
     /**
      * Путь к файлу с хранимой процедурой, обеспечивающей параллельное выполнение запросов
-     *
-     * @const string
      */
     protected const EXECUTE_MULTIPLE_PATH = '';
 
@@ -123,14 +118,15 @@ class Db
         array $schemas = [],
         array $options = [],
         bool $isArrayResults = true
-    ): Db {
+    ) : Db
+    {
         $key =
             $dns
             . $login
             . $password
             . json_encode($schemas, JSON_UNESCAPED_UNICODE)
             . json_encode($options, JSON_UNESCAPED_UNICODE)
-            . (string) $isArrayResults;
+            . $isArrayResults;
 
         if (empty(static::$instances[$key])) {
             static::$instances[$key] = new Db($dns, $login, $password, $options, $isArrayResults);
@@ -156,7 +152,7 @@ class Db
         string $login,
         string $password,
         array $options = [],
-        bool $isArrayResults = true
+        \bool $isArrayResults = true
     )
     {
         if (!preg_match('/^(.+?):/', $dns, $matches)) {
@@ -190,8 +186,9 @@ class Db
      * @throws ConnectionStringException
      * @throws PDOConnectionException
      * @throws QueryCountNotMatchParamsException
+     * @throws QueryExecutionException
      */
-    public function initTablesList(array $schemas)
+    public function initTablesList(array $schemas) : void
     {
         if (!preg_match('/dbname=(.+)/i', $this->dns, $matches)) {
             throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
@@ -219,13 +216,13 @@ class Db
 
             $_SESSION['databases'][$dbName]['tables']
                 = $this->tables = array_merge($this->tables, $this->query(
-                "SELECT 
+                    "SELECT 
                         (CASE WHEN table_schema = 'public' 
                               THEN '' 
                               ELSE table_schema || '.' 
                          END) || table_name AS table_name 
                     FROM information_schema.tables 
-                    WHERE table_schema IN ('" . implode("', '", $schemas) . "')"));
+                    WHERE table_schema = ANY(string_to_array(" . implode("', '", $schemas) . '))'));
         } elseif ($this->dbDriver === 'mysql') {
             if (!preg_match('/dbname=(.+?)/i', $this->dns, $matches)) {
                 throw new ConnectionStringException(
@@ -246,7 +243,7 @@ class Db
     /**
      * Добавить дополнительные таблицы к используемым
      */
-    protected function addAdditionTables(): void
+    protected function addAdditionTables() : void
     {
         $dbms = strtoupper($this->dbDriver);
         foreach (\constant("static::{$dbms}_ADDITIONAL_TABLES") as $table) {
@@ -259,7 +256,7 @@ class Db
      *
      * @param string $dbName - имя базы данных
      */
-    protected static function initSessionStorage(string $dbName): void
+    protected static function initSessionStorage(string $dbName) : void
     {
         if (!isset($_SESSION['databases'])) {
             $_SESSION['databases'] = [];
@@ -271,6 +268,32 @@ class Db
     }
 
     /**
+     * @param array $params
+     * @param string $query
+     * @param int $rowCount
+     *
+     * @return \PDOStatement
+     *
+     * @throws QueryExecutionException
+     */
+    protected function execQuery(array &$params, string &$query, int &$rowCount) : \PDOStatement
+    {
+        if (empty($params)) {
+            $sth = $this->dbh->query($query);
+        } else {
+            $sth = $this->dbh->prepare($query);
+            $sth->execute($params);
+        }
+
+        if (!$sth) {
+            throw new QueryExecutionException();
+        }
+
+        $rowCount += $sth->rowCount();
+        return $sth;
+    }
+
+    /**
      * Сделать запрос к БД, поддерживает подготовленные выражения
      *
      * @param string[]|string $query - запрос
@@ -279,25 +302,10 @@ class Db
      * @return array|int
      *
      * @throws QueryCountNotMatchParamsException
+     * @throws QueryExecutionException
      */
     public function query($query, array $params = [])
     {
-        $execQuery = function (array &$params, string &$query, int &$rowCount) {
-            if (empty($params)) {
-                $sth = $this->dbh->query($query);
-            } else {
-                $sth = $this->dbh->prepare($query);
-                $sth->execute($params);
-            }
-
-            if (!$sth) {
-                throw new QueryExecutionException();
-            }
-
-            $rowCount += $sth->rowCount();
-            return $sth;
-        };
-
         $rowCount = 0;
         if (\is_array($query)) {
             if (!isset($params[0]) && \count($query) !== \count($params)) {
@@ -306,14 +314,14 @@ class Db
 
             $this->dbh->beginTransaction();
             foreach ($query as $key => & $value) {
-                $execQuery($params[$key], $value, $rowCount);
+                $this->execQuery($params[$key], $value, $rowCount);
             }
 
             unset($value);
             return $rowCount;
         }
 
-        $sth = $execQuery($params, $query, $rowCount);
+        $sth = $this->execQuery($params, $query, $rowCount);
         $result = $sth->fetchAll();
         if (!$result && !$this->isArrayResults) {
             return $rowCount;
@@ -333,7 +341,7 @@ class Db
      *
      * @return string
      */
-    public function getDBDriver(): string
+    public function getDBDriver() : string
     {
         return $this->dbDriver;
     }
@@ -343,7 +351,7 @@ class Db
      *
      * @return \PDO
      */
-    public function getDBH(): ?\PDO
+    public function getDBH() : ?\PDO
     {
         return $this->dbh;
     }
@@ -353,7 +361,7 @@ class Db
      *
      * @return bool
      */
-    public function beginTransaction(): bool
+    public function beginTransaction() : bool
     {
         try {
             return $this->dbh->beginTransaction();
@@ -367,7 +375,7 @@ class Db
      *
      * @return bool
      */
-    public function commit(): bool
+    public function commit() : bool
     {
         try {
             return $this->dbh->commit();
@@ -381,7 +389,7 @@ class Db
      *
      * @return bool
      */
-    public function rollBack(): bool
+    public function rollBack() : bool
     {
         try {
             return $this->dbh->rollBack();
@@ -397,7 +405,7 @@ class Db
      *
      * @return array
      */
-    public function getEditTables(string &$query): array
+    public function getEditTables(string &$query) : array
     {
         if (preg_match('/(UPDATE\s|INSERT\sINTO\s|DELETE\s|ALTER\sTYPE)/', $query)) {
             return $this->getTables($query);
@@ -413,7 +421,7 @@ class Db
      *
      * @return array
      */
-    public function getTables(string &$query): array
+    public function getTables(string &$query) : array
     {
         $tables = [];
         foreach ($this->tables as & $table) {
@@ -433,7 +441,7 @@ class Db
      *
      * @return string
      */
-    protected function createQStrFromBatch(array &$batch): string
+    protected function createQStrFromBatch(array &$batch) : string
     {
         $queryStr = '';
         foreach ($batch as & $t) {
@@ -455,7 +463,7 @@ class Db
      *
      * @throws DbException
      */
-    public function execBatch(array $batch): bool
+    public function execBatch(array $batch) : bool
     {
         $oldAttrEmulatePrepares = $this->dbh->getAttribute(\PDO::ATTR_EMULATE_PREPARES);
         $this->dbh->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);

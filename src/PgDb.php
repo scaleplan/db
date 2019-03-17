@@ -6,13 +6,14 @@ use Scaleplan\Db\Exceptions\AsyncExecutionException;
 use Scaleplan\Db\Exceptions\DbException;
 use Scaleplan\Db\Exceptions\InvalidIsolationLevelException;
 use Scaleplan\Db\Exceptions\ParallelExecutionException;
+use Scaleplan\Db\Interfaces\PgDbInterface;
 
 /**
  * Class pgDb
  *
  * @package Scaleplan\Db
  */
-class pgDb extends Db
+class PgDb extends Db implements PgDbInterface
 {
     public const SERIALIZABLE = 'SERIALIZABLE';
     public const REPEATABLE_READ = 'REPEATABLE READ';
@@ -72,7 +73,7 @@ class pgDb extends Db
 
         $result = $this->query($query);
 
-        $failed = explode(',', $result[0]['failed']);
+        $failed = array_map('trim', explode(',', $result[0]['failed']));
         foreach ($batch as $key => &$value) {
             if (!\in_array($key + 1, $failed, true)) {
                 unset($batch[$key]);
@@ -155,7 +156,7 @@ class pgDb extends Db
      */
     public function setNextQueryIsolationLevel(string $level) : void
     {
-        if (!\in_array($level, static::ISOLATION_LEVELS)) {
+        if (!\in_array($level, static::ISOLATION_LEVELS, true)) {
             throw new InvalidIsolationLevelException();
         }
 
@@ -169,10 +170,14 @@ class pgDb extends Db
      * @return array|int
      *
      * @throws Exceptions\QueryCountNotMatchParamsException
+     * @throws Exceptions\QueryExecutionException
      */
     protected function retryQuery($query, array $params = [])
     {
         $liteAttempts = $mainAttempts = 0;
+        $liteRetryCount = (int)(getenv('DB_LITE_RETRY_COUNT') ?: static::LITE_RETRY_COUNT);
+        $retryTimeout = (int)(getenv('DB_RETRY_TIMEOUT') ?: static::RETRY_TIMEOUT);
+        $mainRetryCount = (int)(getenv('DB_MAIN_RETRY_COUNT') ?: static::MAIN_RETRY_COUNT);
         do {
             try {
                 return parent::query($query, $params);
@@ -182,17 +187,17 @@ class pgDb extends Db
                     case '2D':
                     case '3B':
                         $liteAttempts++;
-                        if ($liteAttempts <= static::LITE_RETRY_COUNT) {
-                            usleep(static::RETRY_TIMEOUT);
-                            continue;
+                        if ($liteAttempts <= $liteRetryCount) {
+                            usleep($retryTimeout);
+                            continue 2;
                         }
                         break;
                     case '40':
                     case '55':
                         $mainAttempts++;
-                        if ($mainAttempts <= static::MAIN_RETRY_COUNT) {
-                            usleep(static::RETRY_TIMEOUT);
-                            continue;
+                        if ($mainAttempts <= $mainRetryCount) {
+                            usleep($retryTimeout);
+                            continue 2;
                         }
                 }
             }
@@ -208,6 +213,7 @@ class pgDb extends Db
      * @return array|int
      *
      * @throws Exceptions\QueryCountNotMatchParamsException
+     * @throws Exceptions\QueryExecutionException
      * @throws InvalidIsolationLevelException
      */
     public function query($query, array $params = [])
@@ -229,11 +235,12 @@ class pgDb extends Db
      * @return array
      *
      * @throws Exceptions\QueryCountNotMatchParamsException
+     * @throws Exceptions\QueryExecutionException
      * @throws InvalidIsolationLevelException
      */
     public function setIsolationLevel(string $level) : array
     {
-        if (!\in_array($level, static::ISOLATION_LEVELS)) {
+        if (!\in_array($level, static::ISOLATION_LEVELS, true)) {
             throw new InvalidIsolationLevelException();
         }
 
