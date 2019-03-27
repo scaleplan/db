@@ -139,7 +139,7 @@ class Db implements DbInterface
         string $login,
         string $password,
         array $options = [],
-        \bool $isArrayResults = true
+        bool $isArrayResults = true
     )
     {
         if (!preg_match('/^(.+?):/', $dsn, $matches)) {
