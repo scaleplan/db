@@ -104,7 +104,7 @@ class TableTags implements TableTagsInterface
                               ELSE table_schema || '.' 
                          END) || table_name AS table_name 
                     FROM information_schema.tables 
-                    WHERE table_schema = ANY(string_to_array(" . implode("', '", $schemas) . '))'));
+                    WHERE table_schema = ANY(string_to_array('" . implode("', '", $schemas) . "'))"));
         } elseif ($this->db->getDBDriver() === 'mysql') {
             $_SESSION['databases'][$dbName]['tables']
                 = $this->tables
@@ -142,7 +142,7 @@ class TableTags implements TableTagsInterface
     public function getTables(string &$query) : array
     {
         $tables = [];
-        foreach ($this->tables as & $table) {
+        foreach ($this->tables as &$table) {
             if (strpos($query, $table['table_name']) !== false) {
                 $tables[] = $table['table_name'];
             }

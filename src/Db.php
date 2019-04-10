@@ -22,7 +22,7 @@ use Scaleplan\Db\Interfaces\DbInterface;
  *
  * @package Scaleplan\Db
  */
-class Db implements DbInterface
+class Db implements DbInterface, \Serializable
 {
     /**
      * Доступные драйвера СУБД
@@ -349,5 +349,23 @@ class Db implements DbInterface
         }
 
         return true;
+    }
+
+    /**
+     * @return array
+     */
+    public function serialize() : string
+    {
+        return $this->getDsn();
+    }
+
+    /**
+     * @param string $serialized
+     *
+     * @throws DbException
+     */
+    public function unserialize($serialized)
+    {
+        throw new DbException('Unserialize not supporting.');
     }
 }
