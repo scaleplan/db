@@ -41,7 +41,7 @@ interface DbInterface
      *
      * @return \PDO
      */
-    public function getDBH() : ?\PDO;
+    public function getConnection() : ?\PDO;
 
     /**
      * Начать транзакцию

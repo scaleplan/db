@@ -56,7 +56,7 @@ class PgDb extends Db implements PgDbInterface
 
         if (!\count($this->query("SELECT proname FROM pg_proc WHERE proname = 'execute_multiple'"))) {
             $sql = file_get_contents(static::EXECUTE_MULTIPLE_PATH);
-            $this->dbh->exec($sql);
+            $this->getConnection()->exec($sql);
         }
 
         $query = 'SELECT execute_multiple(ARRAY[';
@@ -69,7 +69,7 @@ class PgDb extends Db implements PgDbInterface
         $count = \count($batch);
 
         $count = static::DB_MAX_PARALLEL_CONNECTS <= $count ? static::DB_MAX_PARALLEL_CONNECTS : $count;
-        $query .= "], $count, '" . $this->dns . "') AS failed";
+        $query .= "], $count, '" . $this->getDsn() . "') AS failed";
 
         $result = $this->query($query);
 
@@ -107,7 +107,7 @@ class PgDb extends Db implements PgDbInterface
             );
         }
 
-        if (!$db = pg_connect($this->dns)) {
+        if (!$db = pg_connect($this->getDsn())) {
             throw new AsyncExecutionException('Не удалось подключиться к БД через нативный драйвер');
         }
 
@@ -171,6 +171,7 @@ class PgDb extends Db implements PgDbInterface
      *
      * @throws Exceptions\QueryCountNotMatchParamsException
      * @throws Exceptions\QueryExecutionException
+     * @throws InvalidIsolationLevelException
      */
     protected function retryQuery($query, array $params = [])
     {
@@ -180,7 +181,7 @@ class PgDb extends Db implements PgDbInterface
         $mainRetryCount = (int)(getenv('DB_MAIN_RETRY_COUNT') ?: static::MAIN_RETRY_COUNT);
         do {
             try {
-                return parent::query($query, $params);
+                return $this->query($query, $params);
             } catch (\PDOException $e) {
                 switch (substr($e->getCode(), 0, 2)) {
                     case '0Z':

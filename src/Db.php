@@ -52,11 +52,25 @@ class Db implements DbInterface, \Serializable
     protected $dsn = '';
 
     /**
-     * Хэндлер подключения к БД
+     * Логин пользователя подключения
      *
-     * @var null|\PDO
+     * @var string
      */
-    protected $dbh;
+    protected $login = '';
+
+    /**
+     * Пароль пользователя подключения
+     *
+     * @var string
+     */
+    protected $password = '';
+
+    /**
+     * Опции подключения
+     *
+     * @var array
+     */
+    protected $options = [];
 
     /**
      * Имя драйвера СУБД
@@ -98,7 +112,6 @@ class Db implements DbInterface, \Serializable
      * @return Db
      *
      * @throws ConnectionStringException
-     * @throws PDOConnectionException
      */
     public static function getInstance(
         string $dsn,
@@ -132,7 +145,6 @@ class Db implements DbInterface, \Serializable
      * @param bool $isArrayResults - возвращать результат только в виде массива
      *
      * @throws ConnectionStringException
-     * @throws PDOConnectionException
      */
     public function __construct(
         string $dsn,
@@ -153,18 +165,34 @@ class Db implements DbInterface, \Serializable
         }
 
         $this->dbDriver = $matches[1];
+        $this->login = $login;
+        $this->password = $password;
+        $this->options = $options;
+        $this->dsn = $dsn;
+        $this->isArrayResults = $isArrayResults;
+    }
 
-        if (empty($this->dbh = new \PDO($dsn, $login, $password, $options))) {
-            throw new PDOConnectionException();
+    /**
+     * Вернет подключение к базе данных
+     *
+     * @return \PDO
+     *
+     * @throws PDOConnectionException
+     */
+    public function getConnection() : \PDO
+    {
+        static $connection;
+        if (!$connection) {
+            if (!$connection = new \PDO($this->dsn, $this->login, $this->password, $this->options)) {
+                throw new PDOConnectionException();
+            }
+
+            $connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            $connection->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_TO_STRING);
+            $connection->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
         }
 
-        $this->dbh->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        $this->dbh->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_TO_STRING);
-        $this->dbh->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
-
-        $this->dsn = $dsn;
-
-        $this->isArrayResults = $isArrayResults;
+        return $connection;
     }
 
     /**
@@ -182,14 +210,15 @@ class Db implements DbInterface, \Serializable
      *
      * @return \PDOStatement
      *
+     * @throws PDOConnectionException
      * @throws QueryExecutionException
      */
     protected function execQuery(array &$params, string &$query, int &$rowCount) : \PDOStatement
     {
         if (empty($params)) {
-            $sth = $this->dbh->query($query);
+            $sth = $this->getConnection()->query($query);
         } else {
-            $sth = $this->dbh->prepare($query);
+            $sth = $this->getConnection()->prepare($query);
             $sth->execute($params);
         }
 
@@ -209,6 +238,7 @@ class Db implements DbInterface, \Serializable
      *
      * @return array|int
      *
+     * @throws PDOConnectionException
      * @throws QueryCountNotMatchParamsException
      * @throws QueryExecutionException
      */
@@ -220,7 +250,7 @@ class Db implements DbInterface, \Serializable
                 throw new QueryCountNotMatchParamsException();
             }
 
-            $this->dbh->beginTransaction();
+            $this->getConnection()->beginTransaction();
             foreach ($query as $key => & $value) {
                 $this->execQuery($params[$key], $value, $rowCount);
             }
@@ -235,8 +265,8 @@ class Db implements DbInterface, \Serializable
             return $rowCount;
         }
 
-        $result = array_map(function ($record) {
-            return array_map(function ($item) {
+        $result = array_map(static function ($record) {
+            return array_map(static function ($item) {
                 return json_decode($item, true) ?? $item;
             }, $record);
         }, $result);
@@ -255,24 +285,16 @@ class Db implements DbInterface, \Serializable
     }
 
     /**
-     * Вернет подключение к базе данных
-     *
-     * @return \PDO
-     */
-    public function getDBH() : ?\PDO
-    {
-        return $this->dbh;
-    }
-
-    /**
      * Начать транзакцию
      *
      * @return bool
+     *
+     * @throws PDOConnectionException
      */
     public function beginTransaction() : bool
     {
         try {
-            return $this->dbh->beginTransaction();
+            return $this->getConnection()->beginTransaction();
         } catch (\PDOException $e) {
             return false;
         }
@@ -282,11 +304,13 @@ class Db implements DbInterface, \Serializable
      * Фиксировать транзакцию
      *
      * @return bool
+     *
+     * @throws PDOConnectionException
      */
     public function commit() : bool
     {
         try {
-            return $this->dbh->commit();
+            return $this->getConnection()->commit();
         } catch (\PDOException $e) {
             return false;
         }
@@ -296,11 +320,13 @@ class Db implements DbInterface, \Serializable
      * Откатить транцакцию
      *
      * @return bool
+     *
+     * @throws PDOConnectionException
      */
     public function rollBack() : bool
     {
         try {
-            return $this->dbh->rollBack();
+            return $this->getConnection()->rollBack();
         } catch (\PDOException $e) {
             return false;
         }
@@ -337,22 +363,22 @@ class Db implements DbInterface, \Serializable
      */
     public function execBatch(array $batch) : bool
     {
-        $oldAttrEmulatePrepares = $this->dbh->getAttribute(\PDO::ATTR_EMULATE_PREPARES);
-        $this->dbh->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
+        $oldAttrEmulatePrepares = $this->getConnection()->getAttribute(\PDO::ATTR_EMULATE_PREPARES);
+        $this->getConnection()->setAttribute(\PDO::ATTR_EMULATE_PREPARES, true);
         try {
-            $this->dbh->exec($this->createQStrFromBatch($batch));
+            $this->getConnection()->exec($this->createQStrFromBatch($batch));
         } catch (\PDOException $e) {
-            $this->dbh->exec('ROLLBACK');
+            $this->getConnection()->exec('ROLLBACK');
             throw new BatchExecutionException('Ошибка выполнения пакета транзакций: ' . $e->getMessage());
         } finally {
-            $this->dbh->setAttribute(\PDO::ATTR_EMULATE_PREPARES, $oldAttrEmulatePrepares);
+            $this->getConnection()->setAttribute(\PDO::ATTR_EMULATE_PREPARES, $oldAttrEmulatePrepares);
         }
 
         return true;
     }
 
     /**
-     * @return array
+     * @return string
      */
     public function serialize() : string
     {
@@ -364,7 +390,7 @@ class Db implements DbInterface, \Serializable
      *
      * @throws DbException
      */
-    public function unserialize($serialized)
+    public function unserialize($serialized) : void
     {
         throw new DbException('Unserialize not supporting.');
     }
