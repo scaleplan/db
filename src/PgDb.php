@@ -169,9 +169,9 @@ class PgDb extends Db implements PgDbInterface
      *
      * @return array|int
      *
+     * @throws Exceptions\PDOConnectionException
      * @throws Exceptions\QueryCountNotMatchParamsException
      * @throws Exceptions\QueryExecutionException
-     * @throws InvalidIsolationLevelException
      */
     protected function retryQuery($query, array $params = [])
     {
@@ -181,7 +181,7 @@ class PgDb extends Db implements PgDbInterface
         $mainRetryCount = (int)(getenv('DB_MAIN_RETRY_COUNT') ?: static::MAIN_RETRY_COUNT);
         do {
             try {
-                return $this->query($query, $params);
+                return parent::query($query, $params);
             } catch (\PDOException $e) {
                 switch (substr($e->getCode(), 0, 2)) {
                     case '0Z':
@@ -213,6 +213,7 @@ class PgDb extends Db implements PgDbInterface
      *
      * @return array|int
      *
+     * @throws Exceptions\PDOConnectionException
      * @throws Exceptions\QueryCountNotMatchParamsException
      * @throws Exceptions\QueryExecutionException
      * @throws InvalidIsolationLevelException
@@ -235,6 +236,7 @@ class PgDb extends Db implements PgDbInterface
      *
      * @return array
      *
+     * @throws Exceptions\PDOConnectionException
      * @throws Exceptions\QueryCountNotMatchParamsException
      * @throws Exceptions\QueryExecutionException
      * @throws InvalidIsolationLevelException

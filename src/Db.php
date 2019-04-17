@@ -22,7 +22,7 @@ use Scaleplan\Db\Interfaces\DbInterface;
  *
  * @package Scaleplan\Db
  */
-class Db implements DbInterface, \Serializable
+class Db implements \Serializable, DbInterface
 {
     /**
      * Доступные драйвера СУБД
@@ -101,6 +101,26 @@ class Db implements DbInterface, \Serializable
     public static $instances = [];
 
     /**
+     * @var int
+     */
+    protected $userId;
+
+    /**
+     * @var string
+     */
+    protected $locale;
+
+    /**
+     * @var string
+     */
+    protected $timeZone;
+
+    /**
+     * @var \PDO
+     */
+    protected $connection;
+
+    /**
      * Фабрика Db
      *
      * @param string $dsn - строка подключения
@@ -173,6 +193,38 @@ class Db implements DbInterface, \Serializable
     }
 
     /**
+     * @param int $userId
+     */
+    public function setUserId(int $userId) : void
+    {
+        $this->userId = $userId;
+    }
+
+    /**
+     * @param string $locale
+     */
+    public function setLocale(string $locale) : void
+    {
+        $this->locale = $locale;
+    }
+
+    /**
+     * @param \DateTimeZone $timeZone
+     */
+    public function setTimeZone(\DateTimeZone $timeZone) : void
+    {
+        $this->timeZone = $timeZone->getName();
+    }
+
+    /**
+     * @return bool
+     */
+    public function isConnected() : bool
+    {
+        return (bool)$this->connection;
+    }
+
+    /**
      * Вернет подключение к базе данных
      *
      * @return \PDO
@@ -181,18 +233,24 @@ class Db implements DbInterface, \Serializable
      */
     public function getConnection() : \PDO
     {
-        static $connection;
-        if (!$connection) {
-            if (!$connection = new \PDO($this->dsn, $this->login, $this->password, $this->options)) {
+        if (!$this->connection) {
+            if (!$this->connection = new \PDO($this->dsn, $this->login, $this->password, $this->options)) {
                 throw new PDOConnectionException();
             }
 
-            $connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-            $connection->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_TO_STRING);
-            $connection->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+            $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            $this->connection->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_NATURAL);
+            $this->connection->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+
+            $this->userId && $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
+                ->execute(['user_id' => $this->userId]);
+            $this->timeZone && $this->connection->prepare("SELECT set_config('timezone', :timezone, false)")
+                ->execute(['timezone' => $this->timeZone]);
+            $this->locale && $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
+                ->execute(['locale' => $this->locale]);
         }
 
-        return $connection;
+        return $this->connection;
     }
 
     /**
@@ -250,7 +308,7 @@ class Db implements DbInterface, \Serializable
                 throw new QueryCountNotMatchParamsException();
             }
 
-            $this->getConnection()->beginTransaction();
+            $this->beginTransaction();
             foreach ($query as $key => & $value) {
                 $this->execQuery($params[$key], $value, $rowCount);
             }
@@ -310,7 +368,7 @@ class Db implements DbInterface, \Serializable
     public function commit() : bool
     {
         try {
-            return $this->getConnection()->commit();
+            return $this->isConnected() && $this->getConnection()->commit();
         } catch (\PDOException $e) {
             return false;
         }
@@ -326,7 +384,7 @@ class Db implements DbInterface, \Serializable
     public function rollBack() : bool
     {
         try {
-            return $this->getConnection()->rollBack();
+            return $this->isConnected() && $this->getConnection()->rollBack();
         } catch (\PDOException $e) {
             return false;
         }

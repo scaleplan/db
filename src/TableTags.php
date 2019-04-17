@@ -19,6 +19,8 @@ class TableTags implements TableTagsInterface
      */
     public const PGSQL_ADDITIONAL_TABLES = ['pg_type', 'pg_enum'];
 
+    public const SYSTEM_SCHEMAS = ['pg_catalog', 'information_schema'];
+
     /**
      * С какими схемами дополнительно будет рабоать объект при подключении к MySQL
      */
@@ -72,13 +74,14 @@ class TableTags implements TableTagsInterface
     }
 
     /**
-     * @param string[] $schemas - какие схемы будут использоваться
+     * @param string[]|null $schemas - какие схемы будут использоваться
      *
      * @throws ConnectionStringException
      * @throws Exceptions\QueryCountNotMatchParamsException
+     * @throws Exceptions\QueryExecutionException
      * @throws PDOConnectionException
      */
-    public function initTablesList(array $schemas) : void
+    public function initTablesList(array $schemas = null) : void
     {
         if (!preg_match('/dbname=([^;]+)/i', $this->db->getDsn(), $matches)) {
             throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
@@ -97,23 +100,67 @@ class TableTags implements TableTagsInterface
 
         if ($this->db->getDBDriver() === 'pgsql') {
             $_SESSION['databases'][$dbName]['tables']
-                = $this->tables = array_merge($this->tables, $this->db->query(
+                = $this->tables
+                = array_merge($this->tables, $this->getPostgresTables($schemas));
+        } elseif ($this->db->getDBDriver() === 'mysql') {
+            $_SESSION['databases'][$dbName]['tables']
+                = $this->tables
+                = array_merge($this->tables, $this->getMysqlTables($dbName));
+        }
+
+        if (!$this->tables) {
+            throw new PDOConnectionException('Не удалось получить список таблиц');
+        }
+    }
+
+    /**
+     * @param array|null $schemas
+     *
+     * @return array
+     *
+     * @throws Exceptions\QueryCountNotMatchParamsException
+     * @throws Exceptions\QueryExecutionException
+     * @throws PDOConnectionException
+     */
+    protected function getPostgresTables(array $schemas = null) : array
+    {
+        if (null !== $schemas) {
+            return $this->db->query(
                 "SELECT 
                         (CASE WHEN table_schema = 'public' 
                               THEN '' 
                               ELSE table_schema || '.' 
                          END) || table_name AS table_name 
                     FROM information_schema.tables 
-                    WHERE table_schema = ANY(string_to_array('" . implode("', '", $schemas) . "'))"));
-        } elseif ($this->db->getDBDriver() === 'mysql') {
-            $_SESSION['databases'][$dbName]['tables']
-                = $this->tables
-                = array_merge($this->tables, $this->db->query("SHOW TABLES FROM {$matches[1]}"));
+                    WHERE table_schema = ANY(string_to_array(:schemas, ','))",
+                ['schemas' => implode(',', $schemas)]
+            );
         }
 
-        if (!$this->tables) {
-            throw new PDOConnectionException('Не удалось получить список таблиц');
-        }
+        return $this->db->query(
+            "SELECT 
+                        (CASE WHEN table_schema = 'public' 
+                              THEN '' 
+                              ELSE table_schema || '.' 
+                         END) || table_name AS table_name 
+                    FROM information_schema.tables 
+                    WHERE table_schema != ALL(string_to_array(:schemas, ','))",
+            ['schemas' => implode(',', static::SYSTEM_SCHEMAS)]
+        );
+    }
+
+    /**
+     * @param string $dbName
+     *
+     * @return array
+     *
+     * @throws Exceptions\QueryCountNotMatchParamsException
+     * @throws Exceptions\QueryExecutionException
+     * @throws PDOConnectionException
+     */
+    protected function getMysqlTables(string $dbName) : array
+    {
+        return $this->db->query("SHOW TABLES FROM $dbName");
     }
 
     /**
