@@ -121,6 +121,16 @@ class Db implements \Serializable, DbInterface
     protected $connection;
 
     /**
+     * @var bool
+     */
+    protected $isTransactional = true;
+
+    /**
+     * @var string
+     */
+    protected $dbName;
+
+    /**
      * Фабрика Db
      *
      * @param string $dsn - строка подключения
@@ -180,11 +190,18 @@ class Db implements \Serializable, DbInterface
 
         if (!\in_array($matches[1], static::ALLOW_DRIVERS, true)) {
             throw new ConnectionStringException(
-                "Подключение с использование драйвера {$matches[1]} недоступно"
+                "Подключение с использованием драйвера {$matches[1]} недоступно"
             );
         }
 
         $this->dbDriver = $matches[1];
+
+        if (!preg_match('/dbname=([^;]+)/i', $dsn, $matches)) {
+            throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
+        }
+
+        $this->dbName = $matches[1];
+
         $this->login = $login;
         $this->password = $password;
         $this->options = $options;
@@ -193,10 +210,65 @@ class Db implements \Serializable, DbInterface
     }
 
     /**
+     * @return string
+     */
+    public function getLogin() : string
+    {
+        return $this->login;
+    }
+
+    /**
+     * @return string
+     */
+    public function getPassword() : string
+    {
+        return $this->password;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDbName() : string
+    {
+        return $this->dbName;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isTransactional() : bool
+    {
+        return $this->isTransactional;
+    }
+
+    /**
+     * @param bool $isTransactional
+     *
+     * @throws PDOConnectionException
+     */
+    public function setIsTransactional(bool $isTransactional) : void
+    {
+        if ($this->isConnected()) {
+            if (!$isTransactional && $this->isTransactional) {
+                $this->connection->commit();
+            } elseif ($isTransactional && !$this->isTransactional) {
+                $this->beginTransaction();
+            }
+        }
+
+        $this->isTransactional = $isTransactional;
+    }
+
+    /**
      * @param int $userId
      */
     public function setUserId(int $userId) : void
     {
+        if ($this->connection && $userId !== $this->userId) {
+            $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
+                ->execute(['user_id' => $this->userId]);
+        }
+
         $this->userId = $userId;
     }
 
@@ -205,6 +277,11 @@ class Db implements \Serializable, DbInterface
      */
     public function setLocale(string $locale) : void
     {
+        if ($this->connection && $locale !== $this->locale) {
+            $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
+                ->execute(['locale' => $this->locale]);
+        }
+
         $this->locale = $locale;
     }
 
@@ -213,6 +290,11 @@ class Db implements \Serializable, DbInterface
      */
     public function setTimeZone(\DateTimeZone $timeZone) : void
     {
+        if ($this->connection && $timeZone->getName() !== $this->timeZone) {
+            $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
+                ->execute(['locale' => $this->locale]);
+        }
+
         $this->timeZone = $timeZone->getName();
     }
 
@@ -248,6 +330,7 @@ class Db implements \Serializable, DbInterface
                 ->execute(['timezone' => $this->timeZone]);
             $this->locale && $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
                 ->execute(['locale' => $this->locale]);
+            $this->isTransactional && $this->beginTransaction();
         }
 
         return $this->connection;
@@ -308,7 +391,6 @@ class Db implements \Serializable, DbInterface
                 throw new QueryCountNotMatchParamsException();
             }
 
-            $this->beginTransaction();
             foreach ($query as $key => & $value) {
                 $this->execQuery($params[$key], $value, $rowCount);
             }
@@ -351,11 +433,7 @@ class Db implements \Serializable, DbInterface
      */
     public function beginTransaction() : bool
     {
-        try {
-            return $this->getConnection()->beginTransaction();
-        } catch (\PDOException $e) {
-            return false;
-        }
+        return !$this->getConnection()->inTransaction() && $this->getConnection()->beginTransaction();
     }
 
     /**
@@ -367,11 +445,7 @@ class Db implements \Serializable, DbInterface
      */
     public function commit() : bool
     {
-        try {
-            return $this->isConnected() && $this->getConnection()->commit();
-        } catch (\PDOException $e) {
-            return false;
-        }
+        return $this->isConnected() && $this->getConnection()->inTransaction() && $this->getConnection()->commit();
     }
 
     /**
@@ -383,11 +457,7 @@ class Db implements \Serializable, DbInterface
      */
     public function rollBack() : bool
     {
-        try {
-            return $this->isConnected() && $this->getConnection()->rollBack();
-        } catch (\PDOException $e) {
-            return false;
-        }
+        return $this->isConnected() && $this->getConnection()->inTransaction() && $this->getConnection()->rollBack();
     }
 
     /**

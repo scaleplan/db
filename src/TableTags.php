@@ -76,18 +76,13 @@ class TableTags implements TableTagsInterface
     /**
      * @param string[]|null $schemas - какие схемы будут использоваться
      *
-     * @throws ConnectionStringException
      * @throws Exceptions\QueryCountNotMatchParamsException
      * @throws Exceptions\QueryExecutionException
      * @throws PDOConnectionException
      */
     public function initTablesList(array $schemas = null) : void
     {
-        if (!preg_match('/dbname=([^;]+)/i', $this->db->getDsn(), $matches)) {
-            throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
-        }
-
-        $dbName = $matches[1];
+        $dbName = $this->db->getDbName();
 
         if (!empty($_SESSION['databases'][$dbName]['tables'])) {
             $this->tables = $_SESSION['databases'][$dbName]['tables'];

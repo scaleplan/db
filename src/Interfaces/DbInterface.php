@@ -2,12 +2,6 @@
 
 namespace Scaleplan\Db\Interfaces;
 
-
-use Scaleplan\Db\Exceptions\DbException;
-use Scaleplan\Db\Exceptions\PDOConnectionException;
-use Scaleplan\Db\Exceptions\QueryCountNotMatchParamsException;
-use Scaleplan\Db\Exceptions\QueryExecutionException;
-
 /**
  * Db представляет собой класс-обертку для взаимодествия PHP-приложения с СУБД PostgreSQL и MySQL.
  * Позволяет прозрачно взаимодействовать с любой из этих СУБД не вникая в различия взаимодейтвия PHP с этими системами –
@@ -22,6 +16,31 @@ use Scaleplan\Db\Exceptions\QueryExecutionException;
  */
 interface DbInterface
 {
+    /**
+     * @return string
+     */
+    public function getDbName() : string;
+
+    /**
+     * @return string
+     */
+    public function getLogin() : string;
+
+    /**
+     * @return string
+     */
+    public function getPassword() : string;
+
+    /**
+     * @return bool
+     */
+    public function isTransactional() : bool;
+
+    /**
+     * @param bool $isTransactional
+     */
+    public function setIsTransactional(bool $isTransactional) : void;
+
     /**
      * @param int $userId
      */
@@ -46,8 +65,6 @@ interface DbInterface
      * Вернет подключение к базе данных
      *
      * @return \PDO
-     *
-     * @throws PDOConnectionException
      */
     public function getConnection() : \PDO;
 
@@ -63,10 +80,6 @@ interface DbInterface
      * @param array $params - параметры запроса
      *
      * @return array|int
-     *
-     * @throws PDOConnectionException
-     * @throws QueryCountNotMatchParamsException
-     * @throws QueryExecutionException
      */
     public function query($query, array $params = []);
 
@@ -81,8 +94,6 @@ interface DbInterface
      * Начать транзакцию
      *
      * @return bool
-     *
-     * @throws PDOConnectionException
      */
     public function beginTransaction() : bool;
 
@@ -90,8 +101,6 @@ interface DbInterface
      * Фиксировать транзакцию
      *
      * @return bool
-     *
-     * @throws PDOConnectionException
      */
     public function commit() : bool;
 
@@ -99,8 +108,6 @@ interface DbInterface
      * Откатить транцакцию
      *
      * @return bool
-     *
-     * @throws PDOConnectionException
      */
     public function rollBack() : bool;
 
@@ -110,8 +117,6 @@ interface DbInterface
      * @param string[] $batch - массив транзакций
      *
      * @return bool
-     *
-     * @throws DbException
      */
     public function execBatch(array $batch) : bool;
 
@@ -122,8 +127,6 @@ interface DbInterface
 
     /**
      * @param string $serialized
-     *
-     * @throws DbException
      */
     public function unserialize($serialized) : void;
 }
