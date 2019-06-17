@@ -10,4 +10,5 @@ namespace Scaleplan\Db\Exceptions;
 class BatchExecutionException extends DbException
 {
     public const MESSAGE = 'Batch execution error.';
+    public const CODE = 500;
 }

@@ -10,4 +10,5 @@ namespace Scaleplan\Db\Exceptions;
 class QueryExecutionException extends DbException
 {
     public const MESSAGE = 'Query execution error.';
+    public const CODE = 400;
 }

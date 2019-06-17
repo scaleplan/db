@@ -10,4 +10,5 @@ namespace Scaleplan\Db\Exceptions;
 class ConnectionStringException extends DbException
 {
     public const MESSAGE = 'Connection string error.';
+    public const CODE = 406;
 }

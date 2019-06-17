@@ -10,4 +10,5 @@ namespace Scaleplan\Db\Exceptions;
 class ParallelExecutionException extends DbException
 {
     public const MESSAGE = 'Parallel execution error.';
+    public const CODE = 500;
 }

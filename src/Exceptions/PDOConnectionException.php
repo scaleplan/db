@@ -10,4 +10,5 @@ namespace Scaleplan\Db\Exceptions;
 class PDOConnectionException extends DbException
 {
     public const MESSAGE = 'Connection by PDO error.';
+    public const CODE = 523;
 }
