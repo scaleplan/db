@@ -312,6 +312,7 @@ class Db implements \Serializable, DbInterface
      * @return \PDO
      *
      * @throws PDOConnectionException
+     * @throws \PDOException
      */
     public function getConnection() : \PDO
     {
