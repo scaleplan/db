@@ -2,7 +2,6 @@
 
 namespace Scaleplan\Db;
 
-use Scaleplan\Db\Exceptions\ConnectionStringException;
 use Scaleplan\Db\Exceptions\PDOConnectionException;
 use Scaleplan\Db\Interfaces\DbInterface;
 use Scaleplan\Db\Interfaces\TableTagsInterface;
