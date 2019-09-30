@@ -84,6 +84,13 @@ interface DbInterface
     public function query($query, array $params = []);
 
     /**
+     * @param string $query
+     *
+     * @return int
+     */
+    public function exec(string $query) : int;
+
+    /**
      * Получить имя драйвера СУБД
      *
      * @return string

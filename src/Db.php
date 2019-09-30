@@ -416,6 +416,18 @@ class Db implements \Serializable, DbInterface
     }
 
     /**
+     * @param string $query
+     *
+     * @return int
+     *
+     * @throws PDOConnectionException
+     */
+    public function exec(string $query) : int
+    {
+        return $this->getConnection()->exec($query);
+    }
+
+    /**
      * Получить имя драйвера СУБД
      *
      * @return string
