@@ -324,6 +324,7 @@ class Db implements \Serializable, DbInterface
             $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             $this->connection->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_NATURAL);
             $this->connection->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+            $this->connection->setAttribute(\PDO::ATTR_PERSISTENT, true);
 
             $this->userId && $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
                 ->execute(['user_id' => $this->userId]);
