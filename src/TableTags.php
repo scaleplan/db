@@ -111,10 +111,6 @@ class TableTags implements TableTagsInterface
      * @param array|null $schemas
      *
      * @return array
-     *
-     * @throws Exceptions\QueryCountNotMatchParamsException
-     * @throws Exceptions\QueryExecutionException
-     * @throws PDOConnectionException
      */
     protected function getPostgresTables(array $schemas = null) : array
     {
@@ -147,10 +143,6 @@ class TableTags implements TableTagsInterface
      * @param string $dbName
      *
      * @return array
-     *
-     * @throws Exceptions\QueryCountNotMatchParamsException
-     * @throws Exceptions\QueryExecutionException
-     * @throws PDOConnectionException
      */
     protected function getMysqlTables(string $dbName) : array
     {
