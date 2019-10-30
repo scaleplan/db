@@ -325,6 +325,7 @@ class Db implements \Serializable, DbInterface
             $this->connection->setAttribute(\PDO::ATTR_ORACLE_NULLS, \PDO::NULL_NATURAL);
             $this->connection->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
             $this->connection->setAttribute(\PDO::ATTR_PERSISTENT, true);
+            $this->connection->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
 
             $this->userId && $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
                 ->execute(['user_id' => $this->userId]);
@@ -362,7 +363,8 @@ class Db implements \Serializable, DbInterface
             $sth = $this->getConnection()->query($query);
         } else {
             $sth = $this->getConnection()->prepare($query);
-            $sth->execute($params);
+            static::bindParams($sth, $params);
+            $sth->execute();
         }
 
         if (!$sth) {
@@ -370,6 +372,35 @@ class Db implements \Serializable, DbInterface
         }
 
         $rowCount += $sth->rowCount();
+        return $sth;
+    }
+
+    /**
+     * @param \PDOStatement $sth
+     * @param array $params
+     *
+     * @return \PDOStatement
+     */
+    protected static function bindParams(\PDOStatement $sth, array $params) : \PDOStatement
+    {
+        foreach ($params as $name => $value) {
+            $type = null;
+            switch (gettype($value)) {
+                case 'boolean':
+                    $type = \PDO::PARAM_BOOL;
+                    break;
+
+                case 'integer':
+                    $type = \PDO::PARAM_INT;
+                    break;
+
+                case 'string':
+                    $type = \PDO::PARAM_STR;
+                    break;
+            }
+            $sth->bindValue($name, $value, $type);
+        }
+
         return $sth;
     }
 
