@@ -15,9 +15,9 @@ use Scaleplan\Db\Interfaces\PgDbInterface;
  */
 class PgDb extends Db implements PgDbInterface
 {
-    public const SERIALIZABLE = 'SERIALIZABLE';
+    public const SERIALIZABLE    = 'SERIALIZABLE';
     public const REPEATABLE_READ = 'REPEATABLE READ';
-    public const READ_COMMITTED = 'READ COMMITTED';
+    public const READ_COMMITTED  = 'READ COMMITTED';
 
     public const ISOLATION_LEVELS = [
         self::READ_COMMITTED,
@@ -25,7 +25,7 @@ class PgDb extends Db implements PgDbInterface
         self::SERIALIZABLE,
     ];
 
-    public const RETRY_TIMEOUT = 100000;
+    public const RETRY_TIMEOUT    = 100000;
     public const LITE_RETRY_COUNT = 1;
     public const MAIN_RETRY_COUNT = 2;
 
@@ -48,7 +48,7 @@ class PgDb extends Db implements PgDbInterface
      *
      * @throws DbException
      */
-    public function parallelExecute(array $batch): array
+    public function parallelExecute(array $batch) : array
     {
         if ($this->dbDriver !== 'pgsql') {
             throw new ParallelExecutionException('Поддерживается только PostgreSQL');
@@ -91,11 +91,9 @@ class PgDb extends Db implements PgDbInterface
      * @param string[]|string $query - запрос или массив запросов
      * @param array $data - параметры подготовленного запроса
      *
-     * @return bool
-     *
      * @throws DbException
      */
-    public function async($query, array $data = null): bool
+    public function async($query, array $data = null) : void
     {
         if ($this->dbDriver !== 'pgsql') {
             throw new AsyncExecutionException('Поддерживается только PostgreSQL');
@@ -133,20 +131,18 @@ class PgDb extends Db implements PgDbInterface
 
             pg_close($db);
 
-            return true;
+            return;
         }
 
         if (\is_array($query)) {
             throw new AsyncExecutionException(
-                'Для асинхронного выполнения подготовленных запросов недоступно использование пакета запросов'
+                'Для асинхронного выполнения недоступно использование пакета подготовленных запросов'
             );
         }
 
         if (!pg_send_query_params($db, $query, $data)) {
             throw new DbException(pg_last_error($db));
         }
-
-        return true;
     }
 
     /**
@@ -204,7 +200,7 @@ class PgDb extends Db implements PgDbInterface
             }
 
             throw $e;
-        } while(true);
+        } while (true);
     }
 
     /**

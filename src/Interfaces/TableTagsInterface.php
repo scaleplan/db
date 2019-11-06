@@ -2,11 +2,6 @@
 
 namespace Scaleplan\Db\Interfaces;
 
-
-use Scaleplan\Db\Exceptions;
-use Scaleplan\Db\Exceptions\ConnectionStringException;
-use Scaleplan\Db\Exceptions\PDOConnectionException;
-
 /**
  * Class TableTags
  *
@@ -16,10 +11,6 @@ interface TableTagsInterface
 {
     /**
      * @param string[] $schemas - какие схемы будут использоваться
-     *
-     * @throws ConnectionStringException
-     * @throws Exceptions\QueryCountNotMatchParamsException
-     * @throws PDOConnectionException
      */
     public function initTablesList(array $schemas) : void;
 
