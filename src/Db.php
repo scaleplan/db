@@ -399,6 +399,10 @@ class Db implements \Serializable, DbInterface
                     break;
             }
 
+            if (is_int($name)) {
+                $name++;
+            }
+
             $sth->bindValue($name, $value, $type);
         }
 
