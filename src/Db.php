@@ -394,9 +394,8 @@ class Db implements \Serializable, DbInterface
                     $type = \PDO::PARAM_INT;
                     break;
 
-                case 'string':
+                default:
                     $type = \PDO::PARAM_STR;
-                    break;
             }
 
             if (is_int($name)) {
