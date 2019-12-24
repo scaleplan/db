@@ -30,6 +30,11 @@ class PgDb extends Db implements PgDbInterface
     public const MAIN_RETRY_COUNT = 2;
 
     /**
+     * Код указывающий на ошибку произошедшую при попытке добавить дубликат данных
+     */
+    public const DUPLICATE_ERROR_CODES = ['42P04', 23505];
+
+    /**
      * @var string
      */
     protected $nextQueryIsolationLevel;

@@ -30,11 +30,6 @@ class Db implements \Serializable, DbInterface
     public const ALLOW_DRIVERS = ['pgsql', 'mysql'];
 
     /**
-     * Код указывающий на ошибку произошедшую при попытке добавить дубликат данных
-     */
-    public const DUPLICATE_ERROR_CODE = '42P04';
-
-    /**
      * Максимальное число параллельных транзакций
      */
     protected const DB_MAX_PARALLEL_CONNECTS = 10;
