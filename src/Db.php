@@ -506,6 +506,7 @@ class Db implements \Serializable, DbInterface
                 && $this->getConnection()->inTransaction()
                 && $this->getConnection()->rollBack();
         } catch (\PDOException $e) {
+            return false;
         }
     }
 

@@ -16,7 +16,7 @@ BEGIN
       IF dblink_is_busy(c) = 0 THEN
         BEGIN
           PERFORM *
-          FROM dblink_get_result(c)AS tmp(status text);
+          FROM dblink_get_result(c) AS tmp(status);
           EXCEPTION WHEN datatype_mismatch THEN NULL;
                     WHEN others THEN result := CONCAT(result, c,  ',');
         END;

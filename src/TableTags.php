@@ -75,8 +75,6 @@ class TableTags implements TableTagsInterface
     /**
      * @param string[]|null $schemas - какие схемы будут использоваться
      *
-     * @throws Exceptions\QueryCountNotMatchParamsException
-     * @throws Exceptions\QueryExecutionException
      * @throws PDOConnectionException
      */
     public function initTablesList(array $schemas = null) : void
