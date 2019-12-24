@@ -506,7 +506,12 @@ class Db implements \Serializable, DbInterface
      */
     public function rollBack() : bool
     {
-        return $this->isConnected() && $this->getConnection()->inTransaction() && $this->getConnection()->rollBack();
+        try {
+            return $this->isConnected()
+                && $this->getConnection()->inTransaction()
+                && $this->getConnection()->rollBack();
+        } catch (\PDOException $e) {
+        }
     }
 
     /**
