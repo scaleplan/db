@@ -326,8 +326,13 @@ class Db implements \Serializable, DbInterface
                 ->execute(['user_id' => $this->userId]);
             $this->timeZone && $this->connection->prepare("SELECT set_config('timezone', :timezone, false)")
                 ->execute(['timezone' => $this->timeZone]);
-            $this->locale && $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
-                ->execute(['locale' => $this->locale]);
+            if ($this->locale) {
+                $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
+                    ->execute(['locale' => $this->locale]);
+                $this->connection->prepare("SELECT set_config('lc_monetary', :locale, false)")
+                    ->execute(['locale' => $this->locale]);
+            }
+
             $this->isTransactional && $this->beginTransaction();
         }
 
