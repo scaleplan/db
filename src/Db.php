@@ -3,8 +3,8 @@
 namespace Scaleplan\Db;
 
 use Scaleplan\Db\Exceptions\BatchExecutionException;
-use Scaleplan\Db\Exceptions\DbException;
 use Scaleplan\Db\Exceptions\ConnectionStringException;
+use Scaleplan\Db\Exceptions\DbException;
 use Scaleplan\Db\Exceptions\PDOConnectionException;
 use Scaleplan\Db\Exceptions\QueryCountNotMatchParamsException;
 use Scaleplan\Db\Exceptions\QueryExecutionException;
@@ -321,20 +321,20 @@ class Db implements \Serializable, DbInterface
             $this->connection->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
             $this->connection->setAttribute(\PDO::ATTR_PERSISTENT, true);
             $this->connection->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
-
-            $this->userId && $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
-                ->execute(['user_id' => $this->userId]);
-            $this->timeZone && $this->connection->prepare("SELECT set_config('timezone', :timezone, false)")
-                ->execute(['timezone' => $this->timeZone]);
-            if ($this->locale) {
-                $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
-                    ->execute(['locale' => $this->locale]);
-                $this->connection->prepare("SELECT set_config('lc_monetary', :locale, false)")
-                    ->execute(['locale' => $this->locale]);
-            }
-
-            $this->isTransactional && $this->beginTransaction();
         }
+
+        $this->userId && $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
+            ->execute(['user_id' => $this->userId]);
+        $this->timeZone && $this->connection->prepare("SELECT set_config('timezone', :timezone, false)")
+            ->execute(['timezone' => $this->timeZone]);
+        if ($this->locale) {
+            $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
+                ->execute(['locale' => $this->locale]);
+            $this->connection->prepare("SELECT set_config('lc_monetary', :locale, false)")
+                ->execute(['locale' => $this->locale]);
+        }
+
+        $this->isTransactional && $this->beginTransaction();
 
         return $this->connection;
     }

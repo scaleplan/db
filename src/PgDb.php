@@ -45,6 +45,11 @@ class PgDb extends Db implements PgDbInterface
     protected $isRetry;
 
     /**
+     * @var bool
+     */
+    protected $isDeferred;
+
+    /**
      * Выполнить параллельно пакет запросов. Актуально для PostgreSQL
      *
      * @param string[] $batch - массив транзакций
@@ -257,5 +262,26 @@ class PgDb extends Db implements PgDbInterface
         $oldIsolationLevel = $level;
 
         return [$oldIsolationLevel, $level];
+    }
+
+    /**
+     * @param bool $isDeferred
+     */
+    public function setTransactionDeferred(bool $isDeferred) : void
+    {
+        $this->isDeferred = $isDeferred;
+    }
+
+    /**
+     * @return \PDO
+     *
+     * @throws Exceptions\PDOConnectionException
+     */
+    public function getConnection() : \PDO
+    {
+        parent::getConnection();
+        $this->isDeferred && $this->connection->query('SET CONSTRAINTS ALL DEFERRED');
+
+        return $this->connection;
     }
 }
