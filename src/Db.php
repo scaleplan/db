@@ -275,6 +275,8 @@ class Db implements \Serializable, DbInterface
         if ($this->connection && $locale !== $this->locale) {
             $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
                 ->execute(['locale' => $this->locale]);
+            $this->connection->prepare("SELECT set_config('lc_monetary', :locale, false)")
+                ->execute(['locale' => $this->locale]);
         }
 
         $this->locale = $locale;
@@ -286,8 +288,8 @@ class Db implements \Serializable, DbInterface
     public function setTimeZone(\DateTimeZone $timeZone) : void
     {
         if ($this->connection && $timeZone->getName() !== $this->timeZone) {
-            $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
-                ->execute(['locale' => $this->locale]);
+            $this->connection->prepare("SELECT set_config('timezone', :timezone, false)")
+                ->execute(['timezone' => $this->timeZone]);
         }
 
         $this->timeZone = $timeZone->getName();
@@ -322,18 +324,18 @@ class Db implements \Serializable, DbInterface
             $this->connection->setAttribute(\PDO::ATTR_PERSISTENT, true);
             $this->connection->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
 
-            $this->isTransactional && $this->connection->beginTransaction();
-        }
+            $this->userId && $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
+                ->execute(['user_id' => $this->userId]);
+            $this->timeZone && $this->connection->prepare("SELECT set_config('timezone', :timezone, false)")
+                ->execute(['timezone' => $this->timeZone]);
+            if ($this->locale) {
+                $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
+                    ->execute(['locale' => $this->locale]);
+                $this->connection->prepare("SELECT set_config('lc_monetary', :locale, false)")
+                    ->execute(['locale' => $this->locale]);
+            }
 
-        $this->userId && $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
-            ->execute(['user_id' => $this->userId]);
-        $this->timeZone && $this->connection->prepare("SELECT set_config('timezone', :timezone, false)")
-            ->execute(['timezone' => $this->timeZone]);
-        if ($this->locale) {
-            $this->connection->prepare("SELECT set_config('lc_messages', :locale, false)")
-                ->execute(['locale' => $this->locale]);
-            $this->connection->prepare("SELECT set_config('lc_monetary', :locale, false)")
-                ->execute(['locale' => $this->locale]);
+            $this->isTransactional && $this->connection->beginTransaction();
         }
 
         return $this->connection;
