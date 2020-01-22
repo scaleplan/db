@@ -321,6 +321,8 @@ class Db implements \Serializable, DbInterface
             $this->connection->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
             $this->connection->setAttribute(\PDO::ATTR_PERSISTENT, true);
             $this->connection->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
+
+            $this->isTransactional && $this->connection->beginTransaction();
         }
 
         $this->userId && $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
@@ -333,8 +335,6 @@ class Db implements \Serializable, DbInterface
             $this->connection->prepare("SELECT set_config('lc_monetary', :locale, false)")
                 ->execute(['locale' => $this->locale]);
         }
-
-        $this->isTransactional && $this->beginTransaction();
 
         return $this->connection;
     }
