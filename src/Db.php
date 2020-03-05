@@ -386,7 +386,7 @@ class Db implements \Serializable, DbInterface
     protected static function bindParams(\PDOStatement $sth, array $params) : \PDOStatement
     {
         foreach ($params as $name => $value) {
-            $type = null;
+            $type = \PDO::PARAM_STR;
             switch (gettype($value)) {
                 case 'boolean':
                     $type = \PDO::PARAM_BOOL;
@@ -396,8 +396,9 @@ class Db implements \Serializable, DbInterface
                     $type = \PDO::PARAM_INT;
                     break;
 
-                default:
-                    $type = \PDO::PARAM_STR;
+                case 'NULL':
+                    $type = \PDO::PARAM_NULL;
+                    break;
             }
 
             if (is_int($name)) {
