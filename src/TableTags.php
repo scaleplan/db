@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Scaleplan\Db;
 
@@ -16,7 +17,7 @@ class TableTags implements TableTagsInterface
     /**
      * С какими схемами дополнительно будет рабоать объект при подключении к PosqlgreSQL
      */
-    public const PGSQL_ADDITIONAL_TABLES = ['pg_type', 'pg_enum'];
+    public const PGSQL_ADDITIONAL_TABLES = ['pg_enum'];
 
     public const SYSTEM_SCHEMAS = ['pg_catalog', 'information_schema'];
 
@@ -114,25 +115,17 @@ class TableTags implements TableTagsInterface
     {
         if (null !== $schemas) {
             return $this->db->query(
-                "SELECT 
-                        (CASE WHEN table_schema = 'public' 
-                              THEN '' 
-                              ELSE table_schema || '.' 
-                         END) || table_name AS table_name 
-                    FROM information_schema.tables 
-                    WHERE table_schema = ANY(string_to_array(:schemas, ','))",
+                "SELECT table_schema || '.' || table_name AS table_name 
+                 FROM information_schema.tables 
+                 WHERE table_schema = ANY(string_to_array(:schemas, ','))",
                 ['schemas' => implode(',', $schemas)]
             );
         }
 
         return $this->db->query(
-            "SELECT 
-                        (CASE WHEN table_schema = 'public' 
-                              THEN '' 
-                              ELSE table_schema || '.' 
-                         END) || table_name AS table_name 
-                    FROM information_schema.tables 
-                    WHERE table_schema != ALL(string_to_array(:schemas, ','))",
+            "SELECT table_schema || '.' || table_name AS table_name 
+             FROM information_schema.tables 
+             WHERE table_schema != ALL(string_to_array(:schemas, ','))",
             ['schemas' => implode(',', static::SYSTEM_SCHEMAS)]
         );
     }
@@ -180,6 +173,6 @@ class TableTags implements TableTagsInterface
         }
 
         unset($table);
-        return $tables;
+        return array_unique($tables);
     }
 }
