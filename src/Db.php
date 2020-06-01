@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Scaleplan\Db;
 
@@ -259,12 +260,20 @@ class Db implements \Serializable, DbInterface
      */
     public function setUserId(int $userId) : void
     {
-        if ($this->connection && $userId !== $this->userId) {
+        if ($this->connection && $userId && $userId !== $this->userId) {
             $this->connection->prepare("SELECT set_config('user.id', :user_id, false)")
-                ->execute(['user_id' => $this->userId]);
+                ->execute(['user_id' => $userId]);
         }
 
         $this->userId = $userId;
+    }
+
+    /**
+     * @return int
+     */
+    public function getUserId() : int
+    {
+        return $this->userId;
     }
 
     /**
@@ -447,7 +456,7 @@ class Db implements \Serializable, DbInterface
 
         $result = array_map(static function ($record) {
             return array_map(static function ($item) {
-                return json_decode($item, true) ?? $item;
+                return json_decode((string)$item, true) ?? $item;
             }, $record);
         }, $result);
 

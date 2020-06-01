@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Scaleplan\Db\Interfaces;
 
@@ -45,6 +46,11 @@ interface DbInterface
      * @param int $userId
      */
     public function setUserId(int $userId) : void;
+
+    /**
+     * @return int
+     */
+    public function getUserId() : int;
 
     /**
      * @param string $locale
