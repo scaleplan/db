@@ -102,7 +102,7 @@ class TableTags implements TableTagsInterface
         }
 
         if (!$this->tables) {
-            throw new PDOConnectionException('Не удалось получить список таблиц');
+            throw new PDOConnectionException('Не удалось получить список таблиц.');
         }
     }
 

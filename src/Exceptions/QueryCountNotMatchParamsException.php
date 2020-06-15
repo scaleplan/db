@@ -9,5 +9,5 @@ namespace Scaleplan\Db\Exceptions;
  */
 class QueryCountNotMatchParamsException extends DbException
 {
-    public const MESSAGE = 'Query count not match parameter record count.';
+    public const MESSAGE = 'Количество запросов не соответсвует количесву наборов параметров.';
 }

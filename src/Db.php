@@ -181,19 +181,19 @@ class Db implements \Serializable, DbInterface
     )
     {
         if (!preg_match('/^(.+?):/', $dsn, $matches)) {
-            throw new ConnectionStringException('Неверная строка подключения: Не задан драйвер');
+            throw new ConnectionStringException('Неверная строка подключения: не задан драйвер.');
         }
 
         if (!\in_array($matches[1], static::ALLOW_DRIVERS, true)) {
             throw new ConnectionStringException(
-                "Подключение с использованием драйвера {$matches[1]} недоступно"
+                "Подключение с использованием драйвера {$matches[1]} недоступно."
             );
         }
 
         $this->dbDriver = $matches[1];
 
         if (!preg_match('/dbname=([^;]+)/i', $dsn, $matches)) {
-            throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения');
+            throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения.');
         }
 
         $this->dbName = $matches[1];
@@ -587,6 +587,6 @@ class Db implements \Serializable, DbInterface
      */
     public function unserialize($serialized) : void
     {
-        throw new DbException('Unserialize not supporting.');
+        throw new DbException('Десериализация не поддерживается.');
     }
 }

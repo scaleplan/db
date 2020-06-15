@@ -9,6 +9,6 @@ namespace Scaleplan\Db\Exceptions;
  */
 class ConnectionStringException extends DbException
 {
-    public const MESSAGE = 'Connection string error.';
+    public const MESSAGE = 'Ошибка строки подключения.';
     public const CODE = 406;
 }

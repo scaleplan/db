@@ -9,6 +9,6 @@ namespace Scaleplan\Db\Exceptions;
  */
 class AsyncExecutionException extends DbException
 {
-    public const MESSAGE = 'Async execution error.';
+    public const MESSAGE = 'Ошибка асинхронного выполнения запроса.';
     public const CODE = 500;
 }

@@ -9,7 +9,7 @@ namespace Scaleplan\Db\Exceptions;
  */
 class DbException extends \Exception
 {
-    public const MESSAGE = 'Db error.';
+    public const MESSAGE = 'Ошибка базы данных.';
     public const CODE = 400;
 
     /**

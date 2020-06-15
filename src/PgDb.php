@@ -62,7 +62,7 @@ class PgDb extends Db implements PgDbInterface
     public function parallelExecute(array $batch) : array
     {
         if ($this->dbDriver !== 'pgsql') {
-            throw new ParallelExecutionException('Поддерживается только PostgreSQL');
+            throw new ParallelExecutionException('Поддерживается только PostgreSQL.');
         }
 
         if (!\count($this->query("SELECT proname FROM pg_proc WHERE proname = 'execute_multiple'"))) {
@@ -107,22 +107,22 @@ class PgDb extends Db implements PgDbInterface
     public function async($query, array $data = null) : void
     {
         if ($this->dbDriver !== 'pgsql') {
-            throw new AsyncExecutionException('Поддерживается только PostgreSQL');
+            throw new AsyncExecutionException('Поддерживается только PostgreSQL.');
         }
 
         if (!\extension_loaded('pgsql')) {
             throw new AsyncExecutionException(
-                'Для асинхронного выполнения запросов требуется расширение pgsql'
+                'Для асинхронного выполнения запросов требуется расширение pgsql.'
             );
         }
 
         if (!$db = pg_connect($this->getDsn())) {
-            throw new AsyncExecutionException('Не удалось подключиться к БД через нативный драйвер');
+            throw new AsyncExecutionException('Не удалось подключиться к БД через нативный драйвер.');
         }
 
         if (!\is_array($query) && !\is_string($query)) {
             throw new AsyncExecutionException(
-                'Первый параметр должен быть строкой запроса или массивом запросов'
+                'Первый параметр должен быть строкой запроса или массивом запросов.'
             );
         }
 
@@ -134,10 +134,10 @@ class PgDb extends Db implements PgDbInterface
             $result = pg_send_query($db, $queryStr);
             if (!$result) {
                 if (\is_array($query)) {
-                    throw new AsyncExecutionException('Не удалось выполнить пакет запросов');
+                    throw new AsyncExecutionException('Не удалось выполнить пакет запросов.');
                 }
 
-                throw new AsyncExecutionException('Не удалось выполнить запрос');
+                throw new AsyncExecutionException('Не удалось выполнить запрос.');
             }
 
             pg_close($db);
@@ -147,7 +147,7 @@ class PgDb extends Db implements PgDbInterface
 
         if (\is_array($query)) {
             throw new AsyncExecutionException(
-                'Для асинхронного выполнения недоступно использование пакета подготовленных запросов'
+                'Для асинхронного выполнения недоступно использование пакета подготовленных запросов.'
             );
         }
 
