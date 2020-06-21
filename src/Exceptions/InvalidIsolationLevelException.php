@@ -9,6 +9,6 @@ namespace Scaleplan\Db\Exceptions;
  */
 class InvalidIsolationLevelException extends DbException
 {
-    public const MESSAGE = 'Неверный уровень изоляции.';
+    public const MESSAGE = 'db.wrong-isolation-level';
     public const CODE = 406;
 }

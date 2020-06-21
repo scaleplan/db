@@ -9,6 +9,6 @@ namespace Scaleplan\Db\Exceptions;
  */
 class QueryExecutionException extends DbException
 {
-    public const MESSAGE = 'Ошибка выполнения запроса.';
+    public const MESSAGE = 'db.request-execution-error';
     public const CODE = 400;
 }

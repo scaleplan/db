@@ -9,6 +9,6 @@ namespace Scaleplan\Db\Exceptions;
  */
 class ParallelExecutionException extends DbException
 {
-    public const MESSAGE = 'Ошибка параллельного выполнения запросов.';
+    public const MESSAGE = 'db.parallel-execution-error';
     public const CODE = 500;
 }

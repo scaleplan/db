@@ -8,6 +8,7 @@ use Scaleplan\Db\Exceptions\DbException;
 use Scaleplan\Db\Exceptions\InvalidIsolationLevelException;
 use Scaleplan\Db\Exceptions\ParallelExecutionException;
 use Scaleplan\Db\Interfaces\PgDbInterface;
+use function Scaleplan\Translator\translate;
 
 /**
  * Class pgDb
@@ -57,12 +58,21 @@ class PgDb extends Db implements PgDbInterface
      *
      * @return array
      *
-     * @throws DbException
+     * @throws Exceptions\PDOConnectionException
+     * @throws Exceptions\QueryCountNotMatchParamsException
+     * @throws Exceptions\QueryExecutionException
+     * @throws InvalidIsolationLevelException
+     * @throws ParallelExecutionException
+     * @throws \ReflectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ContainerTypeNotSupportingException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\DependencyInjectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ParameterMustBeInterfaceNameOrClassNameException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ReturnTypeMustImplementsInterfaceException
      */
     public function parallelExecute(array $batch) : array
     {
         if ($this->dbDriver !== 'pgsql') {
-            throw new ParallelExecutionException('Поддерживается только PostgreSQL.');
+            throw new ParallelExecutionException(translate('db.only-postgres-supported'));
         }
 
         if (!\count($this->query("SELECT proname FROM pg_proc WHERE proname = 'execute_multiple'"))) {
@@ -102,28 +112,30 @@ class PgDb extends Db implements PgDbInterface
      * @param string[]|string $query - запрос или массив запросов
      * @param array $data - параметры подготовленного запроса
      *
+     * @throws AsyncExecutionException
      * @throws DbException
+     * @throws \ReflectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ContainerTypeNotSupportingException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\DependencyInjectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ParameterMustBeInterfaceNameOrClassNameException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ReturnTypeMustImplementsInterfaceException
      */
     public function async($query, array $data = null) : void
     {
         if ($this->dbDriver !== 'pgsql') {
-            throw new AsyncExecutionException('Поддерживается только PostgreSQL.');
+            throw new AsyncExecutionException(translate('db.only-postgres-supported'));
         }
 
         if (!\extension_loaded('pgsql')) {
-            throw new AsyncExecutionException(
-                'Для асинхронного выполнения запросов требуется расширение pgsql.'
-            );
+            throw new AsyncExecutionException(translate('db.required-pgsql'));
         }
 
         if (!$db = pg_connect($this->getDsn())) {
-            throw new AsyncExecutionException('Не удалось подключиться к БД через нативный драйвер.');
+            throw new AsyncExecutionException(translate('db.pgsql-connect-error'));
         }
 
         if (!\is_array($query) && !\is_string($query)) {
-            throw new AsyncExecutionException(
-                'Первый параметр должен быть строкой запроса или массивом запросов.'
-            );
+            throw new AsyncExecutionException(translate('db.first-param-error'));
         }
 
         if (!$data) {
@@ -134,10 +146,10 @@ class PgDb extends Db implements PgDbInterface
             $result = pg_send_query($db, $queryStr);
             if (!$result) {
                 if (\is_array($query)) {
-                    throw new AsyncExecutionException('Не удалось выполнить пакет запросов.');
+                    throw new AsyncExecutionException(translate('db.batch-execution-error'));
                 }
 
-                throw new AsyncExecutionException('Не удалось выполнить запрос.');
+                throw new AsyncExecutionException(translate('db.request-execution-error'));
             }
 
             pg_close($db);
@@ -146,9 +158,7 @@ class PgDb extends Db implements PgDbInterface
         }
 
         if (\is_array($query)) {
-            throw new AsyncExecutionException(
-                'Для асинхронного выполнения недоступно использование пакета подготовленных запросов.'
-            );
+            throw new AsyncExecutionException(translate('db.async-batch-not-supported'));
         }
 
         if (!pg_send_query_params($db, $query, $data)) {

@@ -6,6 +6,7 @@ namespace Scaleplan\Db;
 use Scaleplan\Db\Exceptions\PDOConnectionException;
 use Scaleplan\Db\Interfaces\DbInterface;
 use Scaleplan\Db\Interfaces\TableTagsInterface;
+use function Scaleplan\Translator\translate;
 
 /**
  * Class TableTags
@@ -74,9 +75,16 @@ class TableTags implements TableTagsInterface
     }
 
     /**
+     * Созранить список пользовательстких таблиц базы данных
+     *
      * @param string[]|null $schemas - какие схемы будут использоваться
      *
      * @throws PDOConnectionException
+     * @throws \ReflectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ContainerTypeNotSupportingException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\DependencyInjectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ParameterMustBeInterfaceNameOrClassNameException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ReturnTypeMustImplementsInterfaceException
      */
     public function initTablesList(array $schemas = null) : void
     {
@@ -102,11 +110,13 @@ class TableTags implements TableTagsInterface
         }
 
         if (!$this->tables) {
-            throw new PDOConnectionException('Не удалось получить список таблиц.');
+            throw new PDOConnectionException(translate('db.tables-list-received-error'));
         }
     }
 
     /**
+     * Получить список пользовательстких таблиц базы данных
+     *
      * @param array|null $schemas
      *
      * @return array

@@ -1,0 +1,20 @@
+db-driver-not-set: 'Wrong connection string: driver not set.'
+db-driver-not-supported: Connection to database via driver :driver not available.
+db-name-not-found: 'Wrong connection string: database name not set.'
+batch-of-transactions-execution-error: 'Batch of transactions execution error: :message'
+deserialize-not-supported: Desarialize not supported.
+only-postgres-supported: Only PostgreSQL supported.
+required-pgsql: Required pgsql extension for async request execution.
+pgsql-connect-error: Connect to database via native driver failed.
+first-param-error: First parameter must be SQL-request or array of SQL-requests.
+batch-execution-error: Batch execution error.
+request-execution-error: Request execution error.
+async-batch-not-supported: Async batches not supported.
+tables-list-received-error: List of tables received error.
+async-execution-error: Request async execution error.
+connection-string-error: Connction string error.
+db-error: Database error.
+wrong-isolation-level: Wrong isolation level.
+parallel-execution-error: Parallel execution error.
+pdo-connection-error: Connection via PDO error.
+requests-and-params-arrays-inconsistency: Requests count and parameters count inconsistency.

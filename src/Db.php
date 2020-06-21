@@ -10,6 +10,7 @@ use Scaleplan\Db\Exceptions\PDOConnectionException;
 use Scaleplan\Db\Exceptions\QueryCountNotMatchParamsException;
 use Scaleplan\Db\Exceptions\QueryExecutionException;
 use Scaleplan\Db\Interfaces\DbInterface;
+use function Scaleplan\Translator\translate;
 
 /**
  * Db представляет собой класс-обертку для взаимодествия PHP-приложения с СУБД PostgreSQL и MySQL.
@@ -171,6 +172,11 @@ class Db implements \Serializable, DbInterface
      * @param bool $isArrayResults - возвращать результат только в виде массива
      *
      * @throws ConnectionStringException
+     * @throws \ReflectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ContainerTypeNotSupportingException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\DependencyInjectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ParameterMustBeInterfaceNameOrClassNameException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ReturnTypeMustImplementsInterfaceException
      */
     public function __construct(
         string $dsn,
@@ -181,19 +187,17 @@ class Db implements \Serializable, DbInterface
     )
     {
         if (!preg_match('/^(.+?):/', $dsn, $matches)) {
-            throw new ConnectionStringException('Неверная строка подключения: не задан драйвер.');
+            throw new ConnectionStringException(translate('db.db-driver-not-set'));
         }
 
         if (!\in_array($matches[1], static::ALLOW_DRIVERS, true)) {
-            throw new ConnectionStringException(
-                "Подключение с использованием драйвера {$matches[1]} недоступно."
-            );
+            throw new ConnectionStringException(translate('db.db-driver-not-supported', ['driver' => $matches[1],]));
         }
 
         $this->dbDriver = $matches[1];
 
         if (!preg_match('/dbname=([^;]+)/i', $dsn, $matches)) {
-            throw new ConnectionStringException('Не удалось выделить имя базы данных из строки подключения.');
+            throw new ConnectionStringException(translate('db.db-name-not-found'));
         }
 
         $this->dbName = $matches[1];
@@ -554,7 +558,13 @@ class Db implements \Serializable, DbInterface
      *
      * @return bool
      *
-     * @throws DbException
+     * @throws BatchExecutionException
+     * @throws PDOConnectionException
+     * @throws \ReflectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ContainerTypeNotSupportingException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\DependencyInjectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ParameterMustBeInterfaceNameOrClassNameException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ReturnTypeMustImplementsInterfaceException
      */
     public function execBatch(array $batch) : bool
     {
@@ -564,7 +574,9 @@ class Db implements \Serializable, DbInterface
             $this->getConnection()->exec($this->createQStrFromBatch($batch));
         } catch (\PDOException $e) {
             $this->getConnection()->exec('ROLLBACK');
-            throw new BatchExecutionException('Ошибка выполнения пакета транзакций: ' . $e->getMessage());
+            throw new BatchExecutionException(
+                translate('db.batch-of-transactions-execution-error', ['message' => $e->getMessage(),])
+            );
         } finally {
             $this->getConnection()->setAttribute(\PDO::ATTR_EMULATE_PREPARES, $oldAttrEmulatePrepares);
         }
@@ -573,6 +585,8 @@ class Db implements \Serializable, DbInterface
     }
 
     /**
+     * Сериализовать текущий объект
+     *
      * @return string
      */
     public function serialize() : string
@@ -581,12 +595,19 @@ class Db implements \Serializable, DbInterface
     }
 
     /**
+     * Десериализовать объект
+     *
      * @param string $serialized
      *
      * @throws DbException
+     * @throws \ReflectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ContainerTypeNotSupportingException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\DependencyInjectionException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ParameterMustBeInterfaceNameOrClassNameException
+     * @throws \Scaleplan\DependencyInjection\Exceptions\ReturnTypeMustImplementsInterfaceException
      */
     public function unserialize($serialized) : void
     {
-        throw new DbException('Десериализация не поддерживается.');
+        throw new DbException(translate('db.deserialize-not-supported'));
     }
 }

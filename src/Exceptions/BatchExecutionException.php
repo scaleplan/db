@@ -9,6 +9,6 @@ namespace Scaleplan\Db\Exceptions;
  */
 class BatchExecutionException extends DbException
 {
-    public const MESSAGE = 'Ошибка выполнения пакета запросов.';
+    public const MESSAGE = 'db.batch-execution-error';
     public const CODE = 500;
 }

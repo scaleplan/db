@@ -1,0 +1,20 @@
+db-driver-not-set: 'Неверная строка подключения: не задан драйвер.'
+db-driver-not-supported: Подключение с использованием драйвера :driver недоступно.
+db-name-not-found: Не удалось выделить имя базы данных из строки подключения.
+batch-of-transactions-execution-error: 'Ошибка выполнения пакета транзакций: :message'
+deserialize-not-supported: Десериализация не поддерживается.
+only-postgres-supported: Поддерживается только PostgreSQL.
+required-pgsql: Для асинхронного выполнения запросов требуется расширение pgsql.
+pgsql-connect-error: Не удалось подключиться к БД через нативный драйвер.
+first-param-error: Первый параметр должен быть строкой запроса или массивом запросов.
+batch-execution-error: Не удалось выполнить пакет запросов.
+request-execution-error: Не удалось выполнить запрос.
+async-batch-not-supported: Для асинхронного выполнения недоступно использование пакета подготовленных запросов.
+tables-list-received-error: Не удалось получить список таблиц.
+async-execution-error: Ошибка асинхронного выполнения запроса.
+connection-string-error: Ошибка строки подключения.
+db-error: Ошибка базы данных.
+wrong-isolation-level: Неверный уровень изоляции.
+parallel-execution-error: Ошибка параллельного выполнения запросов.
+pdo-connection-error: Ошибка подключения через PDO.
+requests-and-params-arrays-inconsistency: Количество запросов не соответсвует количесву наборов параметров.

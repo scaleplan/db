@@ -9,5 +9,5 @@ namespace Scaleplan\Db\Exceptions;
  */
 class QueryCountNotMatchParamsException extends DbException
 {
-    public const MESSAGE = 'Количество запросов не соответсвует количесву наборов параметров.';
+    public const MESSAGE = 'db.requests-and-params-arrays-inconsistency';
 }
