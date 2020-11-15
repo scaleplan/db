@@ -200,7 +200,7 @@ class PgDb extends Db implements PgDbInterface
             try {
                 return parent::query($query, $params);
             } catch (\PDOException $e) {
-                switch (substr($e->getCode(), 0, 2)) {
+                switch (substr((string)$e->getCode(), 0, 2)) {
                     case '0Z':
                     case '2D':
                     case '3B':
